@@ -498,29 +498,6 @@ Figure~\ref{fig:distributed} and Table~\ref{tab:distributed} show distributed CG
 
 \textbf{Convergence.} Residual increases from $10^{-4}$ at 10K DOF to $10^{-2}$ at 400M DOF. This is expected: fixed iteration count (1000) with Jacobi preconditioner, where condition number $\kappa \sim n$ for 2D Poisson. For tighter tolerance, multigrid preconditioning would reduce iterations by $10\times$.
 
-\subsection{Scaling Analysis}
-
-Figure~\ref{fig:scaling} shows the solver performance scaling and numerical accuracy across different backends and problem sizes.
-
-\begin{figure}[t]
-\centering
-\begin{minipage}{0.48\linewidth}
-\centering
-\includegraphics[width=\linewidth]{figures/perf_scaling.png}
-\end{minipage}
-\hfill
-\begin{minipage}{0.48\linewidth}
-\centering
-\includegraphics[width=\linewidth]{figures/accuracy.png}
-\end{minipage}
-\caption{Left: Performance scaling comparison across solver backends. Right: Residual accuracy as a function of problem size, demonstrating convergence properties of iterative vs. direct solvers.}
-\label{fig:scaling}
-\end{figure}
-
-\textbf{Performance scaling.} The left panel shows that PyTorch CG maintains near-linear scaling ($\cO(n^{1.1})$) across 5 orders of magnitude, while direct solvers (SciPy, cuDSS) exhibit super-linear growth and eventually OOM. The crossover point occurs around 500K DOF, beyond which iterative methods are strictly superior.
-
-\textbf{Accuracy trade-offs.} The right panel reveals the fundamental trade-off: direct solvers achieve machine precision ($10^{-14}$) but cannot scale beyond 2M DOF. Iterative solvers relax to $10^{-6}$--$10^{-7}$ residual, which is sufficient for most physics simulations where model error dominates numerical error. For applications requiring higher precision, CG tolerance can be tightened at the cost of additional iterations.
-
 \subsection{Gradient Verification}
 
 We verify gradient correctness by comparing adjoint gradients against finite differences:
