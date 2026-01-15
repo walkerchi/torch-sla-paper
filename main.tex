@@ -79,7 +79,7 @@
 % Abstract
 % ============================================================================
 \begin{abstract}
-We present \torchsla{}, an open-source PyTorch library for differentiable sparse linear algebra. The library addresses two fundamental challenges: (1) \textbf{Adjoint-based differentiation} for linear and nonlinear sparse solvers, achieving $\cO(\text{nnz})$ memory complexity for computational graphs regardless of solver iterations; and (2) \textbf{Sparse Tensor Parallel} computing via domain decomposition with halo exchange, enabling distributed sparse operations across multiple GPUs. \torchsla{} supports multiple backends (SciPy, cuDSS, PyTorch-native) and scales to \textbf{169 million DOF on a single GPU} and \textbf{400 million DOF on 3 GPUs} with near-linear scaling. Benchmarks demonstrate correct gradient computation verified against finite differences. Code is available at \url{https://github.com/walkerchi/torch-sla}.
+Industrial scientific computing predominantly uses sparse matrices to represent unstructured data---finite element meshes, graphs, point clouds. We present \torchsla{}, an open-source PyTorch library that enables GPU-accelerated, scalable, and differentiable sparse linear algebra. The library addresses three fundamental challenges: (1) \textbf{GPU acceleration} for sparse linear solves, nonlinear solves (Newton, Picard, Anderson), and eigenvalue computation; (2) \textbf{Multi-GPU scaling} via domain decomposition with halo exchange, reaching \textbf{400 million DOF on 3 GPUs}; and (3) \textbf{Adjoint-based differentiation} achieving $\cO(1)$ graph nodes and $\cO(\text{nnz})$ memory---independent of solver iterations. \torchsla{} supports multiple backends (SciPy, cuDSS, PyTorch-native) and seamlessly integrates with PyTorch autograd for end-to-end differentiable simulations. Code is available at \url{https://github.com/walkerchi/torch-sla}.
 \end{abstract}
 
 % ============================================================================
@@ -88,17 +88,23 @@ We present \torchsla{}, an open-source PyTorch library for differentiable sparse
 \section{Introduction}
 \label{sec:intro}
 
-Sparse linear systems $\bA\bx = \bb$ are fundamental to scientific computing. They arise in finite element analysis~\citep{hughes2012finite}, graph neural networks~\citep{kipf2017semi,velivckovic2018graph}, physics-informed machine learning~\citep{raissi2019physics,lu2021learning}, and computational fluid dynamics~\citep{jasak2007openfoam,kochkov2021machine}. With the rise of differentiable programming and neural operators~\citep{li2020fourier,brandstetter2022message}, there is growing demand for sparse solvers that integrate with automatic differentiation frameworks like PyTorch~\citep{paszke2019pytorch}.
+Industrial scientific computing predominantly deals with \textit{unstructured data}---finite element meshes, graph networks, point clouds---where sparse matrices are the natural representation. These sparse systems arise in finite element analysis~\citep{hughes2012finite}, computational fluid dynamics~\citep{jasak2007openfoam,kochkov2021machine}, graph neural networks~\citep{kipf2017semi,velivckovic2018graph}, and physics-informed machine learning~\citep{raissi2019physics,lu2021learning}. Efficiently solving sparse linear systems $\bA\bx = \bb$, nonlinear systems $\bF(\bx) = \mathbf{0}$, and eigenvalue problems $\bA\bv = \lambda\bv$ is fundamental to these applications.
 
-\textbf{The challenge of differentiating through solvers.} Consider a loss function $\mathcal{L}(\bx)$ where $\bx = \bA^{-1}\bb$ is obtained by solving a linear system. To train neural networks that interact with such solvers, we need gradients $\partial\mathcal{L}/\partial\bA$ and $\partial\mathcal{L}/\partial\bb$. A naive approach---differentiating through each iteration of an iterative solver---creates $\cO(k)$ nodes in the computational graph, where $k$ may be thousands of iterations. This leads to memory explosion and slow backward passes.
+With the rise of differentiable programming and neural operators~\citep{li2020fourier,brandstetter2022message}, there is growing demand to integrate sparse solvers with deep learning frameworks like PyTorch~\citep{paszke2019pytorch}. However, three fundamental challenges stand in the way:
 
-\textbf{The challenge of scale.} Industrial problems often exceed single-GPU memory. A 3D finite element mesh with 10 million nodes produces a sparse matrix requiring tens of gigabytes. Distributed computing is essential, but sparse matrix operations require careful communication patterns (halo exchange) that are non-trivial to implement correctly with gradient support. Our library demonstrates scaling to \textbf{400 million DOF on 3 GPUs}, enabling industrial-scale differentiable simulations.
+\textbf{Challenge 1: GPU acceleration for sparse operations.} Unlike dense matrices where GPU parallelism is straightforward, sparse matrices have irregular memory access patterns that underutilize GPU bandwidth. Sparse matrix-vector products (SpMV) achieve only 10--20\% of peak memory bandwidth~\citep{li2024sparse}. Direct solvers (LU, Cholesky) require $\cO(n^{1.5})$ memory due to fill-in, often exceeding GPU memory for problems with $>$2M unknowns.
 
-This paper introduces \torchsla{}\footnote{Code available at \url{https://github.com/walkerchi/torch-sla}. Install via \texttt{pip install torch-sla}.}, addressing both challenges with two key innovations:
+\textbf{Challenge 2: Multi-GPU scaling.} Industrial problems (10M--1B unknowns) exceed single-GPU memory. Distributed sparse computing requires domain decomposition and \textit{halo exchange}---communicating boundary values between partitions---which is non-trivial to implement correctly with automatic differentiation support.
+
+\textbf{Challenge 3: PyTorch integration with efficient gradients.} Differentiating through iterative solvers creates $\cO(k)$ nodes in the computational graph, where $k$ may be thousands of iterations. For a 1M-DOF problem with 1000 CG iterations, this requires $\sim$80 GB just for gradient computation. This memory explosion prevents end-to-end training of neural networks that interact with sparse solvers.
+
+This paper introduces \torchsla{}\footnote{Code available at \url{https://github.com/walkerchi/torch-sla}. Install via \texttt{pip install torch-sla}.}, a library that addresses all three challenges:
 \begin{itemize}
-    \item \textbf{Adjoint-based differentiation} (\S\ref{sec:adjoint}): We implement the adjoint method for linear solves, eigenvalue problems, and nonlinear systems. This achieves $\cO(1)$ computational graph nodes and $\cO(\text{nnz})$ memory, independent of solver iterations.
+    \item \textbf{GPU-accelerated sparse solvers}: We provide unified APIs for linear solves, nonlinear solves (Newton, Picard, Anderson acceleration), and eigenvalue computation (LOBPCG), with multiple backends (SciPy, cuDSS, PyTorch-native).
     
-    \item \textbf{Sparse tensor parallelism} (\S\ref{sec:distributed}): We implement domain decomposition with automatic halo exchange following industrial CFD/FEM practices. This enables multi-GPU computing with gradient support.
+    \item \textbf{Sparse tensor parallelism} (\S\ref{sec:distributed}): We implement domain decomposition with automatic halo exchange, enabling multi-GPU scaling to \textbf{400 million DOF on 3 GPUs}.
+    
+    \item \textbf{Adjoint-based differentiation} (\S\ref{sec:adjoint}): We implement the adjoint method for linear, nonlinear, and eigenvalue problems, achieving $\cO(1)$ graph nodes and $\cO(\text{nnz})$ memory---independent of solver iterations.
 \end{itemize}
 
 % ============================================================================
