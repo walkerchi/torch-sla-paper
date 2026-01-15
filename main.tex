@@ -79,7 +79,7 @@
 % Abstract
 % ============================================================================
 \begin{abstract}
-We present \torchsla{}, an open-source PyTorch library for differentiable sparse linear algebra. The library addresses two fundamental challenges: (1) \textbf{Adjoint-based differentiation} for linear and nonlinear sparse solvers, achieving $\cO(\text{nnz})$ memory complexity for computational graphs regardless of solver iterations; and (2) \textbf{Sparse Tensor Parallel} computing via domain decomposition with halo exchange, enabling distributed sparse operations across multiple GPUs. \torchsla{} supports multiple backends (SciPy, cuDSS, PyTorch-native) and scales to 100+ million degrees of freedom on a single GPU. Benchmarks demonstrate $12\times$ speedup on multi-GPU configurations and correct gradient computation verified against finite differences. Code is available at \url{https://github.com/walkerchi/torch-sla}.
+We present \torchsla{}, an open-source PyTorch library for differentiable sparse linear algebra. The library addresses two fundamental challenges: (1) \textbf{Adjoint-based differentiation} for linear and nonlinear sparse solvers, achieving $\cO(\text{nnz})$ memory complexity for computational graphs regardless of solver iterations; and (2) \textbf{Sparse Tensor Parallel} computing via domain decomposition with halo exchange, enabling distributed sparse operations across multiple GPUs. \torchsla{} supports multiple backends (SciPy, cuDSS, PyTorch-native) and scales to \textbf{169 million DOF on a single GPU} and \textbf{400 million DOF on 3 GPUs} with near-linear scaling. Benchmarks demonstrate correct gradient computation verified against finite differences. Code is available at \url{https://github.com/walkerchi/torch-sla}.
 \end{abstract}
 
 % ============================================================================
@@ -92,7 +92,7 @@ Sparse linear systems $\bA\bx = \bb$ are fundamental to scientific computing. Th
 
 \textbf{The challenge of differentiating through solvers.} Consider a loss function $\mathcal{L}(\bx)$ where $\bx = \bA^{-1}\bb$ is obtained by solving a linear system. To train neural networks that interact with such solvers, we need gradients $\partial\mathcal{L}/\partial\bA$ and $\partial\mathcal{L}/\partial\bb$. A naive approach---differentiating through each iteration of an iterative solver---creates $\cO(k)$ nodes in the computational graph, where $k$ may be thousands of iterations. This leads to memory explosion and slow backward passes.
 
-\textbf{The challenge of scale.} Industrial problems often exceed single-GPU memory. A 3D finite element mesh with 10 million nodes produces a sparse matrix requiring tens of gigabytes. Distributed computing is essential, but sparse matrix operations require careful communication patterns (halo exchange) that are non-trivial to implement correctly with gradient support.
+\textbf{The challenge of scale.} Industrial problems often exceed single-GPU memory. A 3D finite element mesh with 10 million nodes produces a sparse matrix requiring tens of gigabytes. Distributed computing is essential, but sparse matrix operations require careful communication patterns (halo exchange) that are non-trivial to implement correctly with gradient support. Our library demonstrates scaling to \textbf{400 million DOF on 3 GPUs}, enabling industrial-scale differentiable simulations.
 
 This paper introduces \torchsla{}\footnote{Code available at \url{https://github.com/walkerchi/torch-sla}. Install via \texttt{pip install torch-sla}.}, addressing both challenges with two key innovations:
 \begin{itemize}
@@ -553,7 +553,7 @@ Nonlinear (5 Newton) & $4.7 \times 10^{-7}$ & 5 solves & 1 solve \\
 \section{Conclusion}
 \label{sec:conclusion}
 
-We presented \torchsla{}, a differentiable sparse linear algebra library with two innovations: (1) adjoint-based differentiation achieving $\cO(\text{nnz})$ graph complexity, and (2) distributed sparse computing with halo exchange. The library scales to 169M DOF on single GPU.
+We presented \torchsla{}, a differentiable sparse linear algebra library with two innovations: (1) adjoint-based differentiation achieving $\cO(\text{nnz})$ graph complexity, and (2) distributed sparse computing with halo exchange. The library scales to \textbf{169M DOF on a single GPU} and \textbf{400M DOF on 3 GPUs}, demonstrating industrial-scale capability with full gradient support.
 
 \subsection{Future Work}
 
