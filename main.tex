@@ -100,7 +100,7 @@ With the rise of differentiable programming and neural operators~\citep{li2020fo
 
 This paper introduces \torchsla{}\footnote{Code available at \url{https://github.com/walkerchi/torch-sla}. Install via \texttt{pip install torch-sla}.}, a library that addresses all three challenges:
 \begin{itemize}
-    \item \textbf{GPU-accelerated sparse solvers}: We provide unified APIs for linear solves, nonlinear solves (Newton, Picard, Anderson acceleration), and eigenvalue computation (LOBPCG), with multiple backends (SciPy, cuDSS, PyTorch-native).
+    \item \textbf{GPU-accelerated sparse solvers}: We provide unified APIs for linear solves (CG~\citep{hestenes1952methods}, BiCGStab~\citep{vorst1992bicgstab}), nonlinear solves (Newton, Picard, Anderson acceleration~\citep{anderson1965iterative,kelley1995iterative}), and eigenvalue computation (LOBPCG~\citep{knyazev2001lobpcg}), with multiple backends (SciPy, cuDSS, PyTorch-native).
     
     \item \textbf{Sparse tensor parallelism} (\S\ref{sec:distributed}): We implement domain decomposition with automatic halo exchange, enabling \textbf{400 million DOF linear solve on 3 GPUs}.
     
@@ -135,9 +135,9 @@ We first introduce the background on sparse linear systems (\S\ref{sec:backgroun
 
 A sparse linear system $\bA\bx = \bb$ has a matrix $\bA \in \R^{n \times n}$ with $\text{nnz} \ll n^2$ non-zero entries. We store matrices in coordinate (COO) format: three arrays for row indices, column indices, and values.
 
-\textbf{Direct solvers} (LU, Cholesky factorization) compute exact solutions but require $\cO(n^{1.5})$ memory for 2D problems due to fill-in---new non-zeros created during factorization~\citep{george1973nested}. For a 2D Poisson problem with $n$ unknowns, the factored matrix has $\cO(n \log n)$ non-zeros instead of the original $\cO(n)$.
+\textbf{Direct solvers} (LU, Cholesky factorization~\citep{golub2013matrix}) compute exact solutions but require $\cO(n^{1.5})$ memory for 2D problems due to fill-in---new non-zeros created during factorization~\citep{george1973nested}. For a 2D Poisson problem with $n$ unknowns, the factored matrix has $\cO(n \log n)$ non-zeros instead of the original $\cO(n)$.
 
-\textbf{Iterative solvers} (Conjugate Gradient, BiCGStab, GMRES) maintain $\cO(\text{nnz})$ memory by never forming the factorization. However, they require $\cO(\sqrt{\kappa})$ iterations for CG where $\kappa$ is the condition number~\citep{saad2003iterative}. Each iteration performs one sparse matrix-vector multiplication (SpMV) costing $\cO(\text{nnz})$.
+\textbf{Iterative solvers} (Conjugate Gradient~\citep{hestenes1952methods}, BiCGStab~\citep{vorst1992bicgstab}, GMRES~\citep{saad1986gmres}) maintain $\cO(\text{nnz})$ memory by never forming the factorization. However, they require $\cO(\sqrt{\kappa})$ iterations for CG where $\kappa$ is the condition number~\citep{saad2003iterative}. Each iteration performs one sparse matrix-vector multiplication (SpMV) costing $\cO(\text{nnz})$.
 
 \textbf{The differentiation problem.} Given loss $\mathcal{L}(\bx)$ where $\bx = \bA^{-1}\bb$, we need gradients with respect to both $\bb$ and the non-zero values of $\bA$. If we differentiate through $k$ iterations of CG, the computational graph has $\cO(k)$ nodes, each storing intermediate vectors. For $k = 1000$ iterations and $n = 10^6$, this requires $\sim$80 GB just for the graph. Our adjoint approach reduces this to $\cO(1)$ nodes.
 
