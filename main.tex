@@ -79,7 +79,7 @@
 % Abstract
 % ============================================================================
 \begin{abstract}
-Industrial scientific computing predominantly uses sparse matrices to represent unstructured data---finite element meshes, graphs, point clouds. We present \torchsla{}, an open-source PyTorch library that enables GPU-accelerated, scalable, and differentiable sparse linear algebra. The library addresses three fundamental challenges: (1) \textbf{GPU acceleration} for sparse linear solves, nonlinear solves (Newton, Picard, Anderson), and eigenvalue computation; (2) \textbf{Multi-GPU scaling} via domain decomposition with halo exchange, reaching \textbf{400 million DOF linear solve on 3 GPUs}; and (3) \textbf{Adjoint-based differentiation} achieving $\cO(1)$ graph nodes and $\cO(\text{nnz})$ memory---independent of solver iterations. \torchsla{} supports multiple backends (SciPy, cuDSS, PyTorch-native) and seamlessly integrates with PyTorch autograd for end-to-end differentiable simulations. Code is available at \url{https://github.com/walkerchi/torch-sla}.
+Industrial scientific computing predominantly uses sparse matrices to represent unstructured data---finite element meshes, graphs, point clouds. We present \torchsla{}, an open-source PyTorch library that enables GPU-accelerated, scalable, and differentiable sparse linear algebra. The library addresses three fundamental challenges: (1) \textbf{GPU acceleration} for sparse linear solves, nonlinear solves (Newton, Picard, Anderson), and eigenvalue computation; (2) \textbf{Multi-GPU scaling} via domain decomposition with halo exchange, reaching \textbf{400 million DOF linear solve on 3 GPUs}; and (3) \textbf{Adjoint-based differentiation} achieving $\cO(1)$ computational graph nodes (for autograd) and $\cO(\text{nnz})$ memory---independent of solver iterations. \torchsla{} supports multiple backends (SciPy, cuDSS, PyTorch-native) and seamlessly integrates with PyTorch autograd for end-to-end differentiable simulations. Code is available at \url{https://github.com/walkerchi/torch-sla}.
 \end{abstract}
 
 % ============================================================================
@@ -104,7 +104,7 @@ This paper introduces \torchsla{}\footnote{Code available at \url{https://github
     
     \item \textbf{Sparse tensor parallelism} (\S\ref{sec:distributed}): We implement domain decomposition with automatic halo exchange, enabling \textbf{400 million DOF linear solve on 3 GPUs}.
     
-    \item \textbf{Adjoint-based differentiation} (\S\ref{sec:adjoint}): We implement the adjoint method for linear, nonlinear, and eigenvalue problems, achieving $\cO(1)$ graph nodes and $\cO(\text{nnz})$ memory---independent of solver iterations.
+    \item \textbf{Adjoint-based differentiation} (\S\ref{sec:adjoint}): We implement the adjoint method for linear, nonlinear, and eigenvalue problems, achieving $\cO(1)$ autograd graph nodes and $\cO(\text{nnz})$ memory---independent of solver iterations.
 \end{itemize}
 
 % ============================================================================
@@ -113,7 +113,7 @@ This paper introduces \torchsla{}\footnote{Code available at \url{https://github
 \section{Related Work}
 \label{sec:related}
 
-\textbf{Differentiable linear algebra.} JAX~\citep{jax2018github} provides differentiable sparse CG, but naive differentiation through iterations creates $\cO(k)$ graph nodes. \citet{blondel2022efficient} formalize implicit differentiation for optimization layers. OptNet~\citep{amos2017optnet} and cvxpylayers~\citep{agrawal2019differentiable} handle convex optimization. Deep equilibrium models~\citep{bai2019deep} and Jacobian-free backpropagation~\citep{fung2022jfb} address implicit layers but focus on fixed-point iterations rather than sparse linear systems.
+\textbf{Differentiable linear algebra.} JAX~\citep{jax2018github} provides differentiable sparse CG, but naive differentiation through iterations creates $\cO(k)$ computational graph nodes. \citet{blondel2022efficient} formalize implicit differentiation for optimization layers. OptNet~\citep{amos2017optnet} and cvxpylayers~\citep{agrawal2019differentiable} handle convex optimization. Deep equilibrium models~\citep{bai2019deep} and Jacobian-free backpropagation~\citep{fung2022jfb} address implicit layers but focus on fixed-point iterations rather than sparse linear systems.
 
 \textbf{Sparse solvers and GPU acceleration.} SciPy~\citep{scipy2020} provides SuperLU/UMFPACK for CPU. For GPU, NVIDIA cuDSS~\citep{nvidia2024cudss} offers direct solvers, while AmgX~\citep{naumov2015amgx} provides algebraic multigrid with excellent scalability. Recent surveys~\citep{li2024sparse} cover sparse matrix computations on modern GPUs. None of these natively support PyTorch autograd.
 
