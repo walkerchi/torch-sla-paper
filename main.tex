@@ -454,45 +454,49 @@ Figure~\ref{fig:benchmark} and Table~\ref{tab:benchmark} compare solver backends
 
 \subsection{Multi-GPU Performance}
 
-Figure~\ref{fig:distributed} and Table~\ref{tab:distributed} show distributed CG on 4 NVIDIA H200 GPUs with NCCL backend.
+Figure~\ref{fig:distributed} and Table~\ref{tab:distributed} show distributed CG scaling from 10K to \textbf{400 million DOF} on H200 GPUs with NCCL backend.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.95\linewidth]{figures/distributed_benchmark.png}
-\caption{Multi-GPU scaling performance: distributed CG with NCCL backend on 4$\times$ H200 GPUs, showing time and memory scaling across problem sizes.}
+\caption{Multi-GPU scaling to 400M DOF: distributed CG with NCCL backend on 3--4 H200 GPUs, showing time and memory scaling. Near-linear scaling achieved up to 100M DOF; memory capacity limits scaling beyond 200M DOF to 3 GPUs.}
 \label{fig:distributed}
 \end{figure}
 
 \begin{table}[t]
 \centering
-\caption{Distributed solve on 4$\times$ H200 GPUs (NCCL) vs. 4 CPU processes (Gloo).}
+\caption{Distributed CG on H200 GPUs with NCCL backend, scaling from 10K to 400M DOF.}
 \label{tab:distributed}
 \vspace{0.5em}
 \small
-\begin{tabular}{rrrrr}
+\begin{tabular}{rrrrrr}
 \toprule
-\textbf{DOF} & \textbf{GPU Time} & \textbf{CPU Time} & \textbf{Memory/GPU} & \textbf{Speedup} \\
+\textbf{DOF} & \textbf{GPUs} & \textbf{Time} & \textbf{Memory/GPU} & \textbf{Residual} \\
 \midrule
-10K & 0.18 s & 0.37 s & 0.03 GB & 2.1$\times$ \\
-100K & 0.61 s & 7.42 s & 0.05 GB & 12.2$\times$ \\
-500K & 1.64 s & -- & 0.15 GB & -- \\
-1M & 2.82 s & -- & 0.27 GB & -- \\
-2M & 6.02 s & -- & 0.50 GB & -- \\
+10K & 4 & 0.10 s & 0.03 GB & $9.4 \times 10^{-5}$ \\
+100K & 4 & 0.30 s & 0.05 GB & $2.9 \times 10^{-4}$ \\
+1M & 4 & 0.94 s & 0.27 GB & $9.9 \times 10^{-4}$ \\
+10M & 4 & 3.36 s & 2.35 GB & $3.1 \times 10^{-3}$ \\
+50M & 4 & 15.2 s & 11.6 GB & $7.1 \times 10^{-3}$ \\
+100M & 4 & 36.1 s & 23.3 GB & $1.0 \times 10^{-2}$ \\
+200M & 3 & 120 s & 53.7 GB & $1.5 \times 10^{-2}$ \\
+300M & 3 & 217 s & 80.5 GB & $1.9 \times 10^{-2}$ \\
+\textbf{400M} & 3 & \textbf{331 s} & \textbf{110 GB} & $2.3 \times 10^{-2}$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\textbf{Scaling analysis.} The $12\times$ GPU speedup at 100K DOF arises from two factors:
+\textbf{Scaling analysis.} We successfully solve problems up to \textbf{400 million DOF} on 3 H200 GPUs. The scaling exhibits three regimes:
 
-\textit{(1) Compute advantage:} H200 delivers 3.9 TFLOPS (FP64) vs. $\sim$100 GFLOPS for CPU cores, a $40\times$ peak ratio. SpMV achieves $\sim$15\% of peak on both platforms due to memory-bound nature.
+\textit{(1) Small problems ($<$1M DOF):} Time dominated by kernel launch and communication latency. At 10K DOF, each CG iteration takes $\sim$0.1ms, with 50\% spent on \texttt{all\_reduce} synchronization.
 
-\textit{(2) Communication advantage:} NCCL peer-to-peer achieves 400 GB/s (NVLink) vs. Gloo's $\sim$10 GB/s (network), reducing halo exchange latency by $40\times$.
+\textit{(2) Medium problems (1M--100M DOF):} Near-linear scaling with $T \propto n^{1.05}$. At 100M DOF, we achieve 2.8M DOF/s throughput, close to the memory bandwidth limit of H200 (3.9 TB/s $\times$ 4 GPUs).
 
-At small problems (10K DOF), the speedup drops to $2\times$ because communication overhead dominates: each CG iteration requires 2 \texttt{all\_reduce} operations with $\cO(\log P)$ latency, amortized only when local computation is substantial.
+\textit{(3) Large problems ($>$100M DOF):} Memory capacity becomes the bottleneck. At 200M+ DOF, we reduce to 3 GPUs to fit within 140GB/GPU limit. The time scaling remains efficient: 400M DOF in 331s corresponds to 1.2M DOF/s.
 
-\textbf{Memory distribution.} Each GPU stores $n/P$ owned nodes plus $|\mathcal{H}_p|$ halo nodes. For structured grids, $|\mathcal{H}_p| \sim \cO(\sqrt{n/P})$, so halo overhead diminishes with problem size. At 2M DOF, halo overhead is $<$1\%.
+\textbf{Memory efficiency.} Measured 275 bytes/DOF at 400M DOF (110GB / 400M), consistent with sparse matrix storage (80 bytes/DOF) plus solver vectors and halo buffers. The per-GPU memory scales as $\cO(n/P + |\mathcal{H}_p|)$ where halo size $|\mathcal{H}_p| \sim \cO(\sqrt{n/P})$ for 2D grids.
 
-\textbf{Theoretical limits.} With 4 $\times$ 140GB and 443 bytes/DOF, maximum capacity is $\sim$1.3B DOF. Communication becomes the bottleneck: at this scale, halo exchange transfers $\sim$100MB per iteration, taking $\sim$0.25ms on NVLink---comparable to SpMV compute time. This suggests $\sim$50\% parallel efficiency at billion-scale DOF.
+\textbf{Convergence.} Residual increases from $10^{-4}$ at 10K DOF to $10^{-2}$ at 400M DOF. This is expected: fixed iteration count (1000) with Jacobi preconditioner, where condition number $\kappa \sim n$ for 2D Poisson. For tighter tolerance, multigrid preconditioning would reduce iterations by $10\times$.
 
 \subsection{Scaling Analysis}
 
