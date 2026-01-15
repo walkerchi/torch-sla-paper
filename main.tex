@@ -538,7 +538,7 @@ We presented \torchsla{}, a differentiable sparse linear algebra library with tw
 \begin{itemize}
     \item \textbf{Roofline-guided tuning for distributed solvers}: Current distributed CG achieves $\sim$50\% parallel efficiency at billion-scale DOF due to communication bottlenecks. We plan to develop roofline-based auto-tuning that: (a) overlaps halo exchange with local SpMV computation; (b) dynamically adjusts partition granularity based on compute/communication ratio; (c) implements communication-avoiding CG variants~\citep{hoemmen2010communication} to reduce \texttt{all\_reduce} frequency.
     
-    \item \textbf{Learned preconditioners}: GNN-based multigrid~\citep{luz2020learning} and meta-learned preconditioner selection~\citep{chen2022meta} could adaptively choose optimal preconditioners based on matrix structure, potentially reducing iteration counts by $2$--$5\times$.
+    \item \textbf{Learned preconditioners}: GNN-based multigrid~\citep{luz2020learning} and meta-learned preconditioner selection~\citep{chen2022meta} could adaptively choose optimal preconditioners based on matrix structure, potentially improving convergence rates.
     
     \item \textbf{Mixed precision}: Following FlashAttention~\citep{dao2022flashattention}, we plan FP16/BF16 SpMV with FP64 accumulation, potentially doubling throughput while maintaining convergence for well-conditioned problems.
     
