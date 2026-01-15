@@ -454,18 +454,18 @@ Figure~\ref{fig:benchmark} and Table~\ref{tab:benchmark} compare solver backends
 
 \subsection{Multi-GPU Performance}
 
-Figure~\ref{fig:distributed} and Table~\ref{tab:distributed} show distributed CG scaling from 10K to \textbf{400 million DOF} on H200 GPUs with NCCL backend.
+Figure~\ref{fig:distributed} and Table~\ref{tab:distributed} summarize distributed CG performance on H200 GPUs with NCCL backend.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.95\linewidth]{figures/distributed_benchmark.png}
-\caption{Multi-GPU scaling to 400M DOF: distributed CG with NCCL backend on 3--4 H200 GPUs, showing time and memory scaling. Near-linear scaling achieved up to 100M DOF; memory capacity limits scaling beyond 200M DOF to 3 GPUs.}
+\caption{Multi-GPU scaling: distributed CG with NCCL backend on 3--4 H200 GPUs, showing time and memory scaling across problem sizes.}
 \label{fig:distributed}
 \end{figure}
 
 \begin{table}[t]
 \centering
-\caption{Distributed CG on H200 GPUs with NCCL backend, scaling from 10K to 400M DOF.}
+\caption{Distributed CG on H200 GPUs with NCCL backend.}
 \label{tab:distributed}
 \vspace{0.5em}
 \small
@@ -486,7 +486,7 @@ Figure~\ref{fig:distributed} and Table~\ref{tab:distributed} show distributed CG
 \end{tabular}
 \end{table}
 
-\textbf{Scaling analysis.} We successfully solve problems up to \textbf{400 million DOF} on 3 H200 GPUs. The scaling exhibits three regimes:
+\textbf{Scaling analysis.} We scale to \textbf{400 million DOF} on 3 H200 GPUs. The scaling exhibits three regimes:
 
 \textit{(1) Small problems ($<$1M DOF):} Time dominated by kernel launch and communication latency. At 10K DOF, each CG iteration takes $\sim$0.1ms, with 50\% spent on \texttt{all\_reduce} synchronization.
 
