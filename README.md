@@ -56,7 +56,7 @@ torch-sla-paper/
 ```bibtex
 @techreport{chi2024torchsla,
   title = {torch-sla: Differentiable Sparse Linear Algebra with Sparse Tensor Parallelism and Adjoint Solvers for PyTorch},
-  author = {Chi, Zhihao},
+  author = {Chi, Mingyuan},
   year = {2024},
   institution = {arXiv},
   url = {https://github.com/walkerchi/torch-sla}
