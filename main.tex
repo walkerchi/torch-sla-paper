@@ -79,7 +79,7 @@
 % Abstract
 % ============================================================================
 \begin{abstract}
-We present \torchsla{}, an open-source PyTorch library for differentiable sparse linear algebra. The library addresses two fundamental challenges: (1) \textbf{Adjoint-based differentiation} for linear and nonlinear sparse solvers, achieving $\cO(1)$ memory complexity for computational graphs regardless of solver iterations; and (2) \textbf{Sparse Tensor Parallel} computing via domain decomposition with halo exchange, enabling distributed sparse operations across multiple GPUs. \torchsla{} supports multiple backends (SciPy, cuDSS, PyTorch-native) and scales to 169 million degrees of freedom. Benchmarks demonstrate $12\times$ speedup on multi-GPU configurations and correct gradient computation verified against finite differences.
+We present \torchsla{}, an open-source PyTorch library for differentiable sparse linear algebra. The library addresses two fundamental challenges: (1) \textbf{Adjoint-based differentiation} for linear and nonlinear sparse solvers, achieving $\cO(1)$ memory complexity for computational graphs regardless of solver iterations; and (2) \textbf{Sparse Tensor Parallel} computing via domain decomposition with halo exchange, enabling distributed sparse operations across multiple GPUs. \torchsla{} supports multiple backends (SciPy, cuDSS, PyTorch-native) and scales to 169 million degrees of freedom. Benchmarks demonstrate $12\times$ speedup on multi-GPU configurations and correct gradient computation verified against finite differences. Code is available at \url{https://github.com/walkerchi/torch-sla}.
 \end{abstract}
 
 % ============================================================================
@@ -94,7 +94,7 @@ Sparse linear systems $\bA\bx = \bb$ are fundamental to scientific computing. Th
 
 \textbf{The challenge of scale.} Industrial problems often exceed single-GPU memory. A 3D finite element mesh with 10 million nodes produces a sparse matrix requiring tens of gigabytes. Distributed computing is essential, but sparse matrix operations require careful communication patterns (halo exchange) that are non-trivial to implement correctly with gradient support.
 
-This paper introduces \torchsla{}, addressing both challenges with two key innovations:
+This paper introduces \torchsla{}\footnote{Code available at \url{https://github.com/walkerchi/torch-sla}. Install via \texttt{pip install torch-sla}.}, addressing both challenges with two key innovations:
 \begin{itemize}
     \item \textbf{Adjoint-based differentiation} (\S\ref{sec:adjoint}): We implement the adjoint method for linear solves, eigenvalue problems, and nonlinear systems. This achieves $\cO(1)$ computational graph nodes and $\cO(\text{nnz})$ memory, independent of solver iterations.
     
