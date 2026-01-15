@@ -79,7 +79,7 @@
 % Abstract
 % ============================================================================
 \begin{abstract}
-Industrial scientific computing predominantly uses sparse matrices to represent unstructured data---finite element meshes, graphs, point clouds. We present \torchsla{}, an open-source PyTorch library that enables GPU-accelerated, scalable, and differentiable sparse linear algebra. The library addresses three fundamental challenges: (1) \textbf{GPU acceleration} for sparse linear solves, nonlinear solves (Newton, Picard, Anderson), and eigenvalue computation; (2) \textbf{Multi-GPU scaling} via domain decomposition with halo exchange, reaching \textbf{400 million DOF on 3 GPUs}; and (3) \textbf{Adjoint-based differentiation} achieving $\cO(1)$ graph nodes and $\cO(\text{nnz})$ memory---independent of solver iterations. \torchsla{} supports multiple backends (SciPy, cuDSS, PyTorch-native) and seamlessly integrates with PyTorch autograd for end-to-end differentiable simulations. Code is available at \url{https://github.com/walkerchi/torch-sla}.
+Industrial scientific computing predominantly uses sparse matrices to represent unstructured data---finite element meshes, graphs, point clouds. We present \torchsla{}, an open-source PyTorch library that enables GPU-accelerated, scalable, and differentiable sparse linear algebra. The library addresses three fundamental challenges: (1) \textbf{GPU acceleration} for sparse linear solves, nonlinear solves (Newton, Picard, Anderson), and eigenvalue computation; (2) \textbf{Multi-GPU scaling} via domain decomposition with halo exchange, reaching \textbf{400 million DOF linear solve on 3 GPUs}; and (3) \textbf{Adjoint-based differentiation} achieving $\cO(1)$ graph nodes and $\cO(\text{nnz})$ memory---independent of solver iterations. \torchsla{} supports multiple backends (SciPy, cuDSS, PyTorch-native) and seamlessly integrates with PyTorch autograd for end-to-end differentiable simulations. Code is available at \url{https://github.com/walkerchi/torch-sla}.
 \end{abstract}
 
 % ============================================================================
@@ -102,7 +102,7 @@ This paper introduces \torchsla{}\footnote{Code available at \url{https://github
 \begin{itemize}
     \item \textbf{GPU-accelerated sparse solvers}: We provide unified APIs for linear solves, nonlinear solves (Newton, Picard, Anderson acceleration), and eigenvalue computation (LOBPCG), with multiple backends (SciPy, cuDSS, PyTorch-native).
     
-    \item \textbf{Sparse tensor parallelism} (\S\ref{sec:distributed}): We implement domain decomposition with automatic halo exchange, enabling multi-GPU scaling to \textbf{400 million DOF on 3 GPUs}.
+    \item \textbf{Sparse tensor parallelism} (\S\ref{sec:distributed}): We implement domain decomposition with automatic halo exchange, enabling \textbf{400 million DOF linear solve on 3 GPUs}.
     
     \item \textbf{Adjoint-based differentiation} (\S\ref{sec:adjoint}): We implement the adjoint method for linear, nonlinear, and eigenvalue problems, achieving $\cO(1)$ graph nodes and $\cO(\text{nnz})$ memory---independent of solver iterations.
 \end{itemize}
