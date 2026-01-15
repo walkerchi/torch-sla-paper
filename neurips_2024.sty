@@ -1,0 +1,68 @@
+% NeurIPS 2024 Style (simplified version)
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{neurips_2024}[2024/01/01 NeurIPS 2024 Style]
+
+\newif\if@final\@finalfalse
+\DeclareOption{final}{\@finaltrue}
+\DeclareOption{preprint}{\@finalfalse}
+\ProcessOptions\relax
+
+% Page layout
+\RequirePackage[
+    letterpaper,
+    top=1in,
+    bottom=1in,
+    left=1in,
+    right=1in
+]{geometry}
+
+% Fonts
+\RequirePackage{times}
+\RequirePackage{helvet}
+\RequirePackage{courier}
+
+% Line spacing
+\linespread{1.0}
+\setlength{\parskip}{0.5em}
+\setlength{\parindent}{1em}
+
+% Section formatting
+\RequirePackage{titlesec}
+\titleformat{\section}{\large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalsize\itshape}{\thesubsubsection}{1em}{}
+\titlespacing*{\section}{0pt}{1.5ex plus 1ex minus .2ex}{1ex plus .2ex}
+\titlespacing*{\subsection}{0pt}{1.25ex plus 1ex minus .2ex}{0.75ex plus .2ex}
+\titlespacing*{\subsubsection}{0pt}{1ex plus 1ex minus .2ex}{0.5ex plus .2ex}
+
+% Abstract formatting
+\renewenvironment{abstract}{%
+    \centerline{\large\bfseries Abstract}%
+    \vspace{0.5em}%
+    \begin{quote}\small
+}{%
+    \end{quote}%
+    \vspace{1em}%
+}
+
+% Title formatting
+\RequirePackage{authblk}
+
+% Float spacing
+\setlength{\floatsep}{10pt plus 2pt minus 2pt}
+\setlength{\textfloatsep}{15pt plus 2pt minus 4pt}
+\setlength{\intextsep}{10pt plus 2pt minus 2pt}
+
+% Caption formatting
+\RequirePackage{caption}
+\captionsetup{font=small,labelfont=bf,skip=5pt}
+
+% Footnotes
+\renewcommand{\thefootnote}{\fnsymbol{footnote}}
+
+% Two-column for final
+\if@final
+    % Could enable twocolumn here if desired
+\fi
+
+\endinput
