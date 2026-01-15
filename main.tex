@@ -411,7 +411,14 @@ We evaluate \torchsla{} on 2D Poisson equations (5-point stencil) using NVIDIA H
 
 \subsection{Single-GPU Scalability}
 
-Table~\ref{tab:benchmark} compares solver backends across problem sizes spanning five orders of magnitude.
+Figure~\ref{fig:benchmark} and Table~\ref{tab:benchmark} compare solver backends across problem sizes spanning five orders of magnitude.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{figures/benchmark_large_scale.png}
+\caption{Single-GPU benchmark results showing performance, memory usage, and residual across solver backends (SciPy, cuDSS, PyTorch CG) on 2D Poisson equation with H200 GPU.}
+\label{fig:benchmark}
+\end{figure}
 
 \begin{table}[t]
 \centering
@@ -447,7 +454,14 @@ Table~\ref{tab:benchmark} compares solver backends across problem sizes spanning
 
 \subsection{Multi-GPU Performance}
 
-Table~\ref{tab:distributed} shows distributed CG on 4 NVIDIA H200 GPUs with NCCL backend.
+Figure~\ref{fig:distributed} and Table~\ref{tab:distributed} show distributed CG on 4 NVIDIA H200 GPUs with NCCL backend.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{figures/distributed_benchmark.png}
+\caption{Multi-GPU scaling performance: distributed CG with NCCL backend on 4$\times$ H200 GPUs, showing time and memory scaling across problem sizes.}
+\label{fig:distributed}
+\end{figure}
 
 \begin{table}[t]
 \centering
@@ -479,6 +493,29 @@ At small problems (10K DOF), the speedup drops to $2\times$ because communicatio
 \textbf{Memory distribution.} Each GPU stores $n/P$ owned nodes plus $|\mathcal{H}_p|$ halo nodes. For structured grids, $|\mathcal{H}_p| \sim \cO(\sqrt{n/P})$, so halo overhead diminishes with problem size. At 2M DOF, halo overhead is $<$1\%.
 
 \textbf{Theoretical limits.} With 4 $\times$ 140GB and 443 bytes/DOF, maximum capacity is $\sim$1.3B DOF. Communication becomes the bottleneck: at this scale, halo exchange transfers $\sim$100MB per iteration, taking $\sim$0.25ms on NVLink---comparable to SpMV compute time. This suggests $\sim$50\% parallel efficiency at billion-scale DOF.
+
+\subsection{Scaling Analysis}
+
+Figure~\ref{fig:scaling} shows the solver performance scaling and numerical accuracy across different backends and problem sizes.
+
+\begin{figure}[t]
+\centering
+\begin{minipage}{0.48\linewidth}
+\centering
+\includegraphics[width=\linewidth]{figures/perf_scaling.png}
+\end{minipage}
+\hfill
+\begin{minipage}{0.48\linewidth}
+\centering
+\includegraphics[width=\linewidth]{figures/accuracy.png}
+\end{minipage}
+\caption{Left: Performance scaling comparison across solver backends. Right: Residual accuracy as a function of problem size, demonstrating convergence properties of iterative vs. direct solvers.}
+\label{fig:scaling}
+\end{figure}
+
+\textbf{Performance scaling.} The left panel shows that PyTorch CG maintains near-linear scaling ($\cO(n^{1.1})$) across 5 orders of magnitude, while direct solvers (SciPy, cuDSS) exhibit super-linear growth and eventually OOM. The crossover point occurs around 500K DOF, beyond which iterative methods are strictly superior.
+
+\textbf{Accuracy trade-offs.} The right panel reveals the fundamental trade-off: direct solvers achieve machine precision ($10^{-14}$) but cannot scale beyond 2M DOF. Iterative solvers relax to $10^{-6}$--$10^{-7}$ residual, which is sufficient for most physics simulations where model error dominates numerical error. For applications requiring higher precision, CG tolerance can be tightened at the cost of additional iterations.
 
 \subsection{Gradient Verification}
 
