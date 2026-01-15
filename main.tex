@@ -13,13 +13,12 @@
 \usepackage{cleveref}
 \usepackage{booktabs}
 \usepackage{multirow}
-\usepackage{algorithm}
-\usepackage{algpseudocode}
 \usepackage{listings}
+\usepackage{fancyvrb}
 \usepackage{subcaption}
 \usepackage[margin=1in]{geometry}
 \usepackage{natbib}
-\usepackage{microtype}
+% \usepackage{microtype} % Removed for compatibility
 
 % ============================================================================
 % Custom Commands
@@ -34,6 +33,10 @@
 \newcommand{\bJ}{\mathbf{J}}
 \newcommand{\blambda}{\boldsymbol{\lambda}}
 \newcommand{\btheta}{\boldsymbol{\theta}}
+\newcommand{\by}{\mathbf{y}}
+\newcommand{\br}{\mathbf{r}}
+\newcommand{\bp}{\mathbf{p}}
+\newcommand{\bv}{\mathbf{v}}
 
 % Theorem environments
 \newtheorem{theorem}{Theorem}
@@ -261,18 +264,22 @@ Each partition $p$ owns a set of nodes $\mathcal{O}_p$ and has halo nodes $\math
 
 For distributed sparse matrix-vector product $\by = \bA\bx$, each partition must exchange halo values (\Cref{alg:halo}):
 
-\begin{algorithm}[htbp]
-\caption{Distributed SpMV with Halo Exchange}
+\begin{figure}[htbp]
+\begin{center}
+\fbox{\parbox{0.9\textwidth}{
+\textbf{Algorithm 1: Distributed SpMV with Halo Exchange}
 \label{alg:halo}
-\begin{algorithmic}[1]
-\Require Local vector $\bx_{\text{local}}$, neighbor information
-\State \textbf{Send} owned boundary values to neighbors (async)
-\State \textbf{Receive} halo values from neighbors (async)
-\State \textbf{Synchronize} communication
-\State $\by_{\text{owned}} \gets \bA_{\text{local}} \bx_{\text{local}}$ \Comment{Includes halo columns}
-\State \Return $\by_{\text{owned}}$
-\end{algorithmic}
-\end{algorithm}
+\begin{enumerate}
+\item[\textbf{Input:}] Local vector $\bx_{\text{local}}$, neighbor information
+\item[1.] \textbf{Send} owned boundary values to neighbors (async)
+\item[2.] \textbf{Receive} halo values from neighbors (async)
+\item[3.] \textbf{Synchronize} communication
+\item[4.] $\by_{\text{owned}} \gets \bA_{\text{local}} \bx_{\text{local}}$ \quad\textit{// Includes halo columns}
+\item[5.] \textbf{Return} $\by_{\text{owned}}$
+\end{enumerate}
+}}
+\end{center}
+\end{figure}
 
 We use PyTorch's \texttt{torch.distributed} with NCCL backend for GPU-GPU communication and Gloo for CPU.
 
@@ -280,25 +287,29 @@ We use PyTorch's \texttt{torch.distributed} with NCCL backend for GPU-GPU commun
 
 For Conjugate Gradient on distributed matrices:
 
-\begin{algorithm}[htbp]
-\caption{Distributed Conjugate Gradient}
+\begin{figure}[htbp]
+\begin{center}
+\fbox{\parbox{0.9\textwidth}{
+\textbf{Algorithm 2: Distributed Conjugate Gradient}
 \label{alg:dist_cg}
-\begin{algorithmic}[1]
-\Require Distributed matrix $\bA$, local RHS $\bb_{\text{owned}}$, tolerance $\epsilon$
-\State $\bx \gets \mathbf{0}$, $\br \gets \bb_{\text{owned}}$, $\bp \gets \br$
-\State $\rho \gets \text{all\_reduce}(\br^\top \br, \text{SUM})$ \Comment{Global dot product}
-\While{$\sqrt{\rho} > \epsilon$}
-    \State $\bA\bp \gets \textsc{DistributedSpMV}(\bA, \bp)$ \Comment{Halo exchange}
-    \State $\alpha \gets \rho / \text{all\_reduce}(\bp^\top \bA\bp, \text{SUM})$
-    \State $\bx \gets \bx + \alpha \bp$
-    \State $\br \gets \br - \alpha \bA\bp$
-    \State $\rho_{\text{new}} \gets \text{all\_reduce}(\br^\top \br, \text{SUM})$
-    \State $\bp \gets \br + (\rho_{\text{new}}/\rho) \bp$
-    \State $\rho \gets \rho_{\text{new}}$
-\EndWhile
-\State \Return $\bx$
-\end{algorithmic}
-\end{algorithm}
+\begin{enumerate}
+\item[\textbf{Input:}] Distributed matrix $\bA$, local RHS $\bb_{\text{owned}}$, tolerance $\epsilon$
+\item[1.] $\bx \gets \mathbf{0}$, $\br \gets \bb_{\text{owned}}$, $\bp \gets \br$
+\item[2.] $\rho \gets \text{all\_reduce}(\br^\top \br, \text{SUM})$ \quad\textit{// Global dot product}
+\item[3.] \textbf{while} $\sqrt{\rho} > \epsilon$ \textbf{do}
+\item[4.] \quad $\bA\bp \gets \textsc{DistributedSpMV}(\bA, \bp)$ \quad\textit{// Halo exchange}
+\item[5.] \quad $\alpha \gets \rho / \text{all\_reduce}(\bp^\top \bA\bp, \text{SUM})$
+\item[6.] \quad $\bx \gets \bx + \alpha \bp$
+\item[7.] \quad $\br \gets \br - \alpha \bA\bp$
+\item[8.] \quad $\rho_{\text{new}} \gets \text{all\_reduce}(\br^\top \br, \text{SUM})$
+\item[9.] \quad $\bp \gets \br + (\rho_{\text{new}}/\rho) \bp$
+\item[10.] \quad $\rho \gets \rho_{\text{new}}$
+\item[11.] \textbf{end while}
+\item[12.] \textbf{Return} $\bx$
+\end{enumerate}
+}}
+\end{center}
+\end{figure}
 
 Each iteration requires:
 \begin{itemize}
@@ -342,23 +353,27 @@ Key properties:
 
 For nonlinear systems $\bF(\bu, \btheta) = \mathbf{0}$, we implement Newton-Raphson with adjoint gradients:
 
-\begin{algorithm}[htbp]
-\caption{Adjoint Nonlinear Solve}
+\begin{figure}[htbp]
+\begin{center}
+\fbox{\parbox{0.9\textwidth}{
+\textbf{Algorithm 3: Adjoint Nonlinear Solve}
 \label{alg:nonlinear}
-\begin{algorithmic}[1]
-\Require Residual $\bF(\bu, \btheta)$, initial guess $\bu_0$, parameters $\btheta$
-\State \textbf{Forward:} Solve $\bF(\bu^*, \btheta) = \mathbf{0}$ via Newton
-\For{$k = 0, 1, \ldots$}
-    \State $\bJ \gets \partial \bF / \partial \bu$ \Comment{Jacobian via autograd}
-    \State $\Delta \bu \gets \bJ^{-1} (-\bF)$ \Comment{Sparse linear solve}
-    \State $\bu \gets \bu + \alpha \Delta \bu$ \Comment{Line search}
-\EndFor
-\State \textbf{Backward:} Given $\partial \mathcal{L}/\partial \bu^*$
-\State Solve $\bJ^\top \blambda = \partial \mathcal{L}/\partial \bu^*$ \Comment{Adjoint equation}
-\State $\partial \mathcal{L}/\partial \btheta \gets -\blambda^\top \partial \bF / \partial \btheta$ \Comment{VJP via autograd}
-\State \Return $\partial \mathcal{L}/\partial \btheta$
-\end{algorithmic}
-\end{algorithm}
+\begin{enumerate}
+\item[\textbf{Input:}] Residual $\bF(\bu, \btheta)$, initial guess $\bu_0$, parameters $\btheta$
+\item[1.] \textbf{Forward:} Solve $\bF(\bu^*, \btheta) = \mathbf{0}$ via Newton
+\item[2.] \textbf{for} $k = 0, 1, \ldots$ \textbf{do}
+\item[3.] \quad $\bJ \gets \partial \bF / \partial \bu$ \quad\textit{// Jacobian via autograd}
+\item[4.] \quad $\Delta \bu \gets \bJ^{-1} (-\bF)$ \quad\textit{// Sparse linear solve}
+\item[5.] \quad $\bu \gets \bu + \alpha \Delta \bu$ \quad\textit{// Line search}
+\item[6.] \textbf{end for}
+\item[7.] \textbf{Backward:} Given $\partial \mathcal{L}/\partial \bu^*$
+\item[8.] Solve $\bJ^\top \blambda = \partial \mathcal{L}/\partial \bu^*$ \quad\textit{// Adjoint equation}
+\item[9.] $\partial \mathcal{L}/\partial \btheta \gets -\blambda^\top \partial \bF / \partial \btheta$ \quad\textit{// VJP via autograd}
+\item[10.] \textbf{Return} $\partial \mathcal{L}/\partial \btheta$
+\end{enumerate}
+}}
+\end{center}
+\end{figure}
 
 We support three nonlinear solver methods:
 \begin{itemize}
