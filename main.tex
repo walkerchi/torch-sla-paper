@@ -88,7 +88,7 @@ We present \torchsla{}, an open-source PyTorch library for differentiable sparse
 \section{Introduction}
 \label{sec:intro}
 
-Sparse linear systems $\bA\bx = \bb$ are fundamental to scientific computing. They arise in finite element analysis~\citep{hughes2012finite}, graph neural networks~\citep{kipf2017semi}, physics-informed machine learning~\citep{raissi2019physics}, and computational fluid dynamics~\citep{jasak2007openfoam}. With the rise of differentiable programming, there is growing demand for sparse solvers that integrate with automatic differentiation frameworks like PyTorch~\citep{paszke2019pytorch}.
+Sparse linear systems $\bA\bx = \bb$ are fundamental to scientific computing. They arise in finite element analysis~\citep{hughes2012finite}, graph neural networks~\citep{kipf2017semi,velivckovic2018graph}, physics-informed machine learning~\citep{raissi2019physics,lu2021learning}, and computational fluid dynamics~\citep{jasak2007openfoam,kochkov2021machine}. With the rise of differentiable programming and neural operators~\citep{li2020fourier,brandstetter2022message}, there is growing demand for sparse solvers that integrate with automatic differentiation frameworks like PyTorch~\citep{paszke2019pytorch}.
 
 \textbf{The challenge of differentiating through solvers.} Consider a loss function $\mathcal{L}(\bx)$ where $\bx = \bA^{-1}\bb$ is obtained by solving a linear system. To train neural networks that interact with such solvers, we need gradients $\partial\mathcal{L}/\partial\bA$ and $\partial\mathcal{L}/\partial\bb$. A naive approach---differentiating through each iteration of an iterative solver---creates $\cO(k)$ nodes in the computational graph, where $k$ may be thousands of iterations. This leads to memory explosion and slow backward passes.
 
@@ -107,11 +107,13 @@ This paper introduces \torchsla{}, addressing both challenges with two key innov
 \section{Related Work}
 \label{sec:related}
 
-\textbf{Differentiable linear algebra.} JAX~\citep{jax2018github} provides differentiable sparse CG, but naive differentiation through iterations creates $\cO(k)$ graph nodes. \citet{blondel2022efficient} formalize implicit differentiation for optimization layers. OptNet~\citep{amos2017optnet} and cvxpylayers~\citep{agrawal2019differentiable} handle convex optimization but not general sparse systems.
+\textbf{Differentiable linear algebra.} JAX~\citep{jax2018github} provides differentiable sparse CG, but naive differentiation through iterations creates $\cO(k)$ graph nodes. \citet{blondel2022efficient} formalize implicit differentiation for optimization layers. OptNet~\citep{amos2017optnet} and cvxpylayers~\citep{agrawal2019differentiable} handle convex optimization. Deep equilibrium models~\citep{bai2019deep} and Jacobian-free backpropagation~\citep{fung2022jfb} address implicit layers but focus on fixed-point iterations rather than sparse linear systems.
 
-\textbf{Sparse solvers.} SciPy~\citep{scipy2020} provides SuperLU/UMFPACK for CPU. NVIDIA cuDSS~\citep{nvidia2024cudss} provides GPU direct solvers. None natively support PyTorch autograd.
+\textbf{Sparse solvers and GPU acceleration.} SciPy~\citep{scipy2020} provides SuperLU/UMFPACK for CPU. For GPU, NVIDIA cuDSS~\citep{nvidia2024cudss} offers direct solvers, while AmgX~\citep{naumov2015amgx} provides algebraic multigrid with excellent scalability. Recent surveys~\citep{li2024sparse} cover sparse matrix computations on modern GPUs. None of these natively support PyTorch autograd.
 
-\textbf{Distributed sparse computing.} PETSc~\citep{balay2019petsc}, Trilinos~\citep{heroux2005overview}, and hypre~\citep{falgout2002hypre} implement distributed sparse linear algebra. OpenFOAM~\citep{jasak2007openfoam} uses domain decomposition for CFD. We bring these patterns to PyTorch with automatic differentiation.
+\textbf{Distributed sparse computing.} PETSc~\citep{balay2019petsc}, Trilinos~\citep{heroux2005overview}, and hypre~\citep{falgout2002hypre} implement distributed sparse linear algebra with sophisticated preconditioners. OpenFOAM~\citep{jasak2007openfoam} uses domain decomposition for CFD. We bring these industrial patterns to PyTorch with automatic differentiation.
+
+\textbf{Learned solvers and preconditioners.} Recent work explores learning components of iterative solvers: learned multigrid prolongation~\citep{greenfeld2019learning}, GNN-based AMG~\citep{luz2020learning}, and learned interface conditions for domain decomposition~\citep{taghibakhshi2024learning}. These complement our library by providing learnable components that can be trained end-to-end.
 
 % ============================================================================
 % Methodology
@@ -476,10 +478,11 @@ We presented \torchsla{}, a differentiable sparse linear algebra library with tw
 \subsection{Future Work}
 
 \begin{itemize}
-    \item \textbf{Learned preconditioners}: Neural networks for adaptive preconditioning.
-    \item \textbf{Mixed precision}: FP16/BF16 with FP64 accumulation.
-    \item \textbf{Sparse-sparse products}: Efficient SpGEMM with gradients.
-    \item \textbf{Integration}: Combining with neural operators~\citep{li2020fourier} for hybrid solvers.
+    \item \textbf{Learned preconditioners}: GNN-based multigrid~\citep{luz2020learning} and meta-learned preconditioner selection~\citep{chen2022meta} could be integrated for adaptive preconditioning.
+    \item \textbf{Mixed precision}: Following FlashAttention~\citep{dao2022flashattention}, we plan FP16/BF16 compute with FP64 accumulation.
+    \item \textbf{AmgX integration}: Wrapping NVIDIA AmgX~\citep{naumov2015amgx} as a differentiable backend for algebraic multigrid.
+    \item \textbf{Neural operator hybrid}: Combining with FNO~\citep{li2020fourier}, DeepONet~\citep{lu2021learning}, and mesh-based GNNs~\citep{pfaff2021learning} for hybrid neural-classical solvers.
+    \item \textbf{Differentiable simulation}: Integration with $\Phi$Flow~\citep{holl2024phiflow} and DiffTaichi~\citep{hu2019difftaichi} for end-to-end differentiable physics.
 \end{itemize}
 
 \paragraph{Availability.} MIT license: \url{https://github.com/walkerchi/torch-sla}

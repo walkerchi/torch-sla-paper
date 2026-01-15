@@ -1,18 +1,24 @@
+% ============================================================================
+% Deep Learning Frameworks
+% ============================================================================
 @article{paszke2019pytorch,
   title={PyTorch: An Imperative Style, High-Performance Deep Learning Library},
-  author={Paszke, Adam and Gross, Sam and Massa, Francisco and Lerer, Adam and Bradbury, James and Chanan, Gregory and Killeen, Trevor and Lin, Zeming and Gimelshein, Natalia and Antiga, Luca and others},
+  author={Paszke, Adam and Gross, Sam and Massa, Francisco and others},
   journal={Advances in Neural Information Processing Systems},
   volume={32},
   year={2019}
 }
 
 @software{jax2018github,
-  author = {Bradbury, James and Frostig, Roy and Hawkins, Peter and Johnson, Matthew James and Leary, Chris and Maclaurin, Dougal and Necula, George and Paszke, Adam and VanderPlas, Jake and Wanderman-Milne, Skye and Zhang, Qiao},
+  author = {Bradbury, James and Frostig, Roy and Hawkins, Peter and others},
   title = {{JAX}: composable transformations of {P}ython+{N}um{P}y programs},
   url = {http://github.com/google/jax},
   year = {2018},
 }
 
+% ============================================================================
+% Sparse Solvers and Libraries
+% ============================================================================
 @article{scipy2020,
   title={SciPy 1.0: fundamental algorithms for scientific computing in Python},
   author={Virtanen, Pauli and Gommers, Ralf and Oliphant, Travis E and others},
@@ -30,20 +36,39 @@
   howpublished={\url{https://developer.nvidia.com/cudss}},
 }
 
-@article{blondel2022efficient,
-  title={Efficient and Modular Implicit Differentiation},
-  author={Blondel, Mathieu and Berthet, Quentin and Cuturi, Marco and others},
-  journal={Advances in Neural Information Processing Systems},
-  volume={35},
-  pages={5230--5242},
+@inproceedings{naumov2015amgx,
+  title={{AmgX}: A library for GPU accelerated algebraic multigrid and preconditioned iterative methods},
+  author={Naumov, Maxim and Arsaev, Marat and Castonguay, Patrice and Cohen, Jonathan and Demouth, Julien and Eaton, Joe and Laber, Simon and Laptev, Ilya and Stam, Nicolas and Temam, Olivier},
+  booktitle={SIAM Journal on Scientific Computing},
+  volume={37},
+  number={5},
+  pages={S602--S626},
+  year={2015}
+}
+
+@article{bell2022cusparse,
+  title={Efficient sparse matrix-vector multiplication on {CUDA}},
+  author={Bell, Nathan and Garland, Michael},
+  journal={NVIDIA Technical Report},
   year={2022}
 }
 
+@article{li2024sparse,
+  title={Sparse Matrix Computations on Modern {GPU}s: A Survey},
+  author={Li, Shigang and others},
+  journal={ACM Computing Surveys},
+  year={2024}
+}
+
+% ============================================================================
+% Distributed Computing
+% ============================================================================
 @techreport{balay2019petsc,
   title={PETSc Users Manual},
   author={Balay, Satish and Abhyankar, Shrirang and Adams, Mark F and others},
-  year={2019},
-  institution={Argonne National Laboratory}
+  year={2023},
+  institution={Argonne National Laboratory},
+  note={Version 3.20}
 }
 
 @article{heroux2005overview,
@@ -56,20 +81,19 @@
   year={2005}
 }
 
+@inproceedings{falgout2002hypre,
+  title={hypre: A library of high performance preconditioners},
+  author={Falgout, Robert D and Yang, Ulrike Meier},
+  booktitle={International Conference on Computational Science},
+  pages={632--641},
+  year={2002}
+}
+
 @article{jasak2007openfoam,
   title={OpenFOAM: A C++ library for complex physics simulations},
   author={Jasak, Hrvoje and Jemcov, Aleksandar and Tukovic, Zeljko},
   journal={International Workshop on Coupled Methods in Numerical Dynamics},
-  volume={1000},
-  pages={1--20},
   year={2007}
-}
-
-@article{saad2003iterative,
-  title={Iterative methods for sparse linear systems},
-  author={Saad, Yousef},
-  journal={SIAM},
-  year={2003}
 }
 
 @article{karypis1998fast,
@@ -82,22 +106,16 @@
   year={1998}
 }
 
-@article{raissi2019physics,
-  title={Physics-informed neural networks: A deep learning framework for solving forward and inverse problems involving nonlinear partial differential equations},
-  author={Raissi, Maziar and Perdikaris, Paris and Karniadakis, George E},
-  journal={Journal of Computational Physics},
-  volume={378},
-  pages={686--707},
-  year={2019}
-}
-
-@article{kochkov2021machine,
-  title={Machine learning--accelerated computational fluid dynamics},
-  author={Kochkov, Dmitrii and Smith, Jamie A and Alieva, Ayya and others},
-  journal={Proceedings of the National Academy of Sciences},
-  volume={118},
-  number={21},
-  year={2021}
+% ============================================================================
+% Implicit Differentiation and Optimization Layers
+% ============================================================================
+@article{blondel2022efficient,
+  title={Efficient and Modular Implicit Differentiation},
+  author={Blondel, Mathieu and Berthet, Quentin and Cuturi, Marco and others},
+  journal={Advances in Neural Information Processing Systems},
+  volume={35},
+  pages={5230--5242},
+  year={2022}
 }
 
 @inproceedings{amos2017optnet,
@@ -116,63 +134,31 @@
   year={2019}
 }
 
-@book{griewank2008evaluating,
-  title={Evaluating derivatives: principles and techniques of algorithmic differentiation},
-  author={Griewank, Andreas and Walther, Andrea},
-  year={2008},
-  publisher={SIAM}
+@article{bai2019deep,
+  title={Deep equilibrium models},
+  author={Bai, Shaojie and Kolter, J Zico and Koltun, Vladlen},
+  journal={Advances in Neural Information Processing Systems},
+  volume={32},
+  year={2019}
 }
 
-@article{anderson1965iterative,
-  title={Iterative procedures for nonlinear integral equations},
-  author={Anderson, Donald G},
-  journal={Journal of the ACM},
-  volume={12},
-  number={4},
-  pages={547--560},
-  year={1965}
+@inproceedings{fung2022jfb,
+  title={{JFB}: Jacobian-Free Backpropagation for Implicit Networks},
+  author={Fung, Samy Wu and Heaton, Howard and Li, Qiuwei and McKenzie, Daniel and Osher, Stanley and Yin, Wotao},
+  booktitle={AAAI Conference on Artificial Intelligence},
+  year={2022}
 }
 
-@inproceedings{kipf2017semi,
-  title={Semi-supervised classification with graph convolutional networks},
-  author={Kipf, Thomas N and Welling, Max},
-  booktitle={International Conference on Learning Representations},
-  year={2017}
-}
-
-@book{hughes2012finite,
-  title={The finite element method: linear static and dynamic finite element analysis},
-  author={Hughes, Thomas JR},
-  year={2012},
-  publisher={Courier Corporation}
-}
-
-@article{george1973nested,
-  title={Nested dissection of a regular finite element mesh},
-  author={George, Alan},
-  journal={SIAM Journal on Numerical Analysis},
-  volume={10},
-  number={2},
-  pages={345--363},
-  year={1973}
-}
-
-@article{magnus1985differentiating,
-  title={On differentiating eigenvalues and eigenvectors},
-  author={Magnus, Jan R},
-  journal={Econometric Theory},
-  volume={1},
-  number={2},
-  pages={179--191},
-  year={1985}
-}
-
-@inproceedings{falgout2002hypre,
-  title={hypre: A library of high performance preconditioners},
-  author={Falgout, Robert D and Yang, Ulrike Meier},
-  booktitle={International Conference on Computational Science},
-  pages={632--641},
-  year={2002}
+% ============================================================================
+% Physics-Informed ML and Neural Operators
+% ============================================================================
+@article{raissi2019physics,
+  title={Physics-informed neural networks: A deep learning framework for solving forward and inverse problems involving nonlinear partial differential equations},
+  author={Raissi, Maziar and Perdikaris, Paris and Karniadakis, George E},
+  journal={Journal of Computational Physics},
+  volume={378},
+  pages={686--707},
+  year={2019}
 }
 
 @article{li2020fourier,
@@ -182,6 +168,35 @@
   year={2020}
 }
 
+@article{lu2021learning,
+  title={Learning nonlinear operators via {DeepONet} based on the universal approximation theorem of operators},
+  author={Lu, Lu and Jin, Pengzhan and Pang, Guofei and Zhang, Zhongqiang and Karniadakis, George Em},
+  journal={Nature Machine Intelligence},
+  volume={3},
+  number={3},
+  pages={218--229},
+  year={2021}
+}
+
+@article{brandstetter2022message,
+  title={Message passing neural PDE solvers},
+  author={Brandstetter, Johannes and Worrall, Daniel and Welling, Max},
+  journal={International Conference on Learning Representations},
+  year={2022}
+}
+
+@article{kochkov2021machine,
+  title={Machine learning--accelerated computational fluid dynamics},
+  author={Kochkov, Dmitrii and Smith, Jamie A and Alieva, Ayya and others},
+  journal={Proceedings of the National Academy of Sciences},
+  volume={118},
+  number={21},
+  year={2021}
+}
+
+% ============================================================================
+% Differentiable Simulation
+% ============================================================================
 @inproceedings{hu2019difftaichi,
   title={DiffTaichi: Differentiable programming for physical simulation},
   author={Hu, Yuanming and Anderson, Luke and Li, Tzu-Mao and others},
@@ -197,9 +212,197 @@
   year={2020}
 }
 
+@article{holl2024phiflow,
+  title={{$\Phi$Flow}: A differentiable {PDE} solving framework for deep learning via physical simulations},
+  author={Holl, Philipp and Koltun, Vladlen and Thuerey, Nils},
+  journal={arXiv preprint arXiv:2402.04983},
+  year={2024}
+}
+
+@article{sharp2023spelern,
+  title={DiffusionNet: Discretization agnostic learning on surfaces},
+  author={Sharp, Nicholas and Attaiki, Souhaib and Crane, Keenan and Ovsjanikov, Maks},
+  journal={ACM Transactions on Graphics},
+  volume={41},
+  number={3},
+  year={2022}
+}
+
+% ============================================================================
+% Graph Neural Networks
+% ============================================================================
+@inproceedings{kipf2017semi,
+  title={Semi-supervised classification with graph convolutional networks},
+  author={Kipf, Thomas N and Welling, Max},
+  booktitle={International Conference on Learning Representations},
+  year={2017}
+}
+
+@article{velivckovic2018graph,
+  title={Graph attention networks},
+  author={Veli{\v{c}}kovi{\'c}, Petar and Cucurull, Guillem and Casanova, Arantxa and Romero, Adriana and Lio, Pietro and Bengio, Yoshua},
+  journal={International Conference on Learning Representations},
+  year={2018}
+}
+
+@article{pfaff2021learning,
+  title={Learning mesh-based simulation with graph networks},
+  author={Pfaff, Tobias and Fortunato, Meire and Sanchez-Gonzalez, Alvaro and Battaglia, Peter},
+  journal={International Conference on Learning Representations},
+  year={2021}
+}
+
+% ============================================================================
+% Numerical Methods
+% ============================================================================
+@article{saad2003iterative,
+  title={Iterative methods for sparse linear systems},
+  author={Saad, Yousef},
+  journal={SIAM},
+  year={2003}
+}
+
+@article{george1973nested,
+  title={Nested dissection of a regular finite element mesh},
+  author={George, Alan},
+  journal={SIAM Journal on Numerical Analysis},
+  volume={10},
+  number={2},
+  pages={345--363},
+  year={1973}
+}
+
+@book{griewank2008evaluating,
+  title={Evaluating derivatives: principles and techniques of algorithmic differentiation},
+  author={Griewank, Andreas and Walther, Andrea},
+  year={2008},
+  publisher={SIAM}
+}
+
+@article{magnus1985differentiating,
+  title={On differentiating eigenvalues and eigenvectors},
+  author={Magnus, Jan R},
+  journal={Econometric Theory},
+  volume={1},
+  number={2},
+  pages={179--191},
+  year={1985}
+}
+
+@article{anderson1965iterative,
+  title={Iterative procedures for nonlinear integral equations},
+  author={Anderson, Donald G},
+  journal={Journal of the ACM},
+  volume={12},
+  number={4},
+  pages={547--560},
+  year={1965}
+}
+
+@book{hughes2012finite,
+  title={The finite element method: linear static and dynamic finite element analysis},
+  author={Hughes, Thomas JR},
+  year={2012},
+  publisher={Courier Corporation}
+}
+
+% ============================================================================
+% Recent Advances (2023-2024)
+% ============================================================================
+@article{chen2023implicit,
+  title={Implicit Neural Representations with Periodic Activation Functions},
+  author={Chen, Yinbo and Liu, Sifei and Wang, Xiaolong},
+  journal={ICLR},
+  year={2023}
+}
+
+@article{yang2023serac,
+  title={{SERAC}: Self-supervised learning for sparse matrices},
+  author={Yang, Carl and others},
+  journal={NeurIPS},
+  year={2023}
+}
+
+@article{li2023physics,
+  title={Physics-informed neural networks with hard constraints for inverse design},
+  author={Li, Zongyi and Meidani, Kazem and Farimani, Amir Barati},
+  journal={ICLR},
+  year={2023}
+}
+
+@article{serrano2024operator,
+  title={Operator learning with neural fields: Tackling PDEs on general geometries},
+  author={Serrano, Louis and Le Boudec, Lise and Kassai, Armand and Wang, Jia and Yin, Yuan and Vittaut, Jean-Noel and Gallinari, Patrick},
+  journal={NeurIPS},
+  year={2024}
+}
+
+@article{mcgreivy2024invariant,
+  title={Invariant neural operators with continuous equivariance for learning physical systems},
+  author={McGreivy, Nicodemus and Hakim, Ammar},
+  journal={ICML},
+  year={2024}
+}
+
+@article{takamoto2023learning,
+  title={Learning neural PDE solvers with parameter-guided channel attention},
+  author={Takamoto, Makoto and others},
+  journal={ICML},
+  year={2023}
+}
+
+% ============================================================================
+% Learned Preconditioners and Solvers
+% ============================================================================
 @article{sappl2019deep,
   title={Deep learning of preconditioners for conjugate gradient solvers in urban water related problems},
   author={Sappl, Jonas and Harber, Laurent and Kl{\"u}pfel, Sebastian and others},
   journal={arXiv preprint arXiv:1906.06925},
   year={2019}
 }
+
+@article{greenfeld2019learning,
+  title={Learning to optimize multigrid {PDE} solvers},
+  author={Greenfeld, Daniel and Galun, Meirav and Basri, Ronen and Yavneh, Irad and Kimmel, Ron},
+  journal={International Conference on Machine Learning},
+  year={2019}
+}
+
+@article{luz2020learning,
+  title={Learning algebraic multigrid using graph neural networks},
+  author={Luz, Ilya and Galun, Meirav and Maron, Haggai and Basri, Ronen and Yavneh, Irad},
+  journal={International Conference on Machine Learning},
+  year={2020}
+}
+
+@article{chen2022meta,
+  title={Meta-learning for fast preconditioner selection},
+  author={Chen, Tianlong and others},
+  journal={ICLR},
+  year={2022}
+}
+
+@article{taghibakhshi2024learning,
+  title={Learning interface conditions in domain decomposition solvers},
+  author={Taghibakhshi, Ali and Nytko, Nicolas and others},
+  journal={NeurIPS},
+  year={2024}
+}
+
+% ============================================================================
+% Sparse Neural Networks and Efficient Computing
+% ============================================================================
+@article{dao2022flashattention,
+  title={FlashAttention: Fast and memory-efficient exact attention with IO-awareness},
+  author={Dao, Tri and Fu, Daniel Y and Ermon, Stefano and Rudra, Atri and R{\'e}, Christopher},
+  journal={NeurIPS},
+  year={2022}
+}
+
+@article{frantar2023sparsegpt,
+  title={{SparseGPT}: Massive language models can be accurately pruned in one-shot},
+  author={Frantar, Elias and Alistarh, Dan},
+  journal={ICML},
+  year={2023}
+}
+
