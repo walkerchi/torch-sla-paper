@@ -79,7 +79,7 @@
 % Abstract
 % ============================================================================
 \begin{abstract}
-We present \torchsla{}, an open-source PyTorch library for differentiable sparse linear algebra. The library addresses two fundamental challenges: (1) \textbf{Adjoint-based differentiation} for linear and nonlinear sparse solvers, achieving $\cO(1)$ memory complexity for computational graphs regardless of solver iterations; and (2) \textbf{Sparse Tensor Parallel} computing via domain decomposition with halo exchange, enabling distributed sparse operations across multiple GPUs. \torchsla{} supports multiple backends (SciPy, cuDSS, PyTorch-native) and scales to 169 million degrees of freedom. Benchmarks demonstrate $12\times$ speedup on multi-GPU configurations and correct gradient computation verified against finite differences. Code is available at \url{https://github.com/walkerchi/torch-sla}.
+We present \torchsla{}, an open-source PyTorch library for differentiable sparse linear algebra. The library addresses two fundamental challenges: (1) \textbf{Adjoint-based differentiation} for linear and nonlinear sparse solvers, achieving $\cO(\text{nnz})$ memory complexity for computational graphs regardless of solver iterations; and (2) \textbf{Sparse Tensor Parallel} computing via domain decomposition with halo exchange, enabling distributed sparse operations across multiple GPUs. \torchsla{} supports multiple backends (SciPy, cuDSS, PyTorch-native) and scales to 100+ million degrees of freedom on a single GPU. Benchmarks demonstrate $12\times$ speedup on multi-GPU configurations and correct gradient computation verified against finite differences. Code is available at \url{https://github.com/walkerchi/torch-sla}.
 \end{abstract}
 
 % ============================================================================
@@ -141,7 +141,7 @@ A sparse linear system $\bA\bx = \bb$ has a matrix $\bA \in \R^{n \times n}$ wit
 
 The adjoint method computes gradients through implicit functions without storing intermediate solver states. We present it for linear systems, eigenvalue problems, and nonlinear systems.
 
-\subsubsection{Linear Systems: The Core Idea}
+\subsubsection{Linear Systems}
 
 Consider $\bx = \bA^{-1}\bb$. Rather than differentiating through the solver iterations, we use the \emph{implicit function theorem}. The solution satisfies $\bA\bx - \bb = \mathbf{0}$. Differentiating implicitly:
 \begin{equation}
@@ -512,7 +512,7 @@ Nonlinear (5 Newton) & $4.7 \times 10^{-7}$ & 5 solves & 1 solve \\
 \section{Conclusion}
 \label{sec:conclusion}
 
-We presented \torchsla{}, a differentiable sparse linear algebra library with two innovations: (1) adjoint-based differentiation achieving $\cO(1)$ graph complexity, and (2) distributed sparse computing with halo exchange. The library scales to 169M DOF on single GPU and provides $12\times$ multi-GPU speedup.
+We presented \torchsla{}, a differentiable sparse linear algebra library with two innovations: (1) adjoint-based differentiation achieving $\cO(\text{nnz})$ graph complexity, and (2) distributed sparse computing with halo exchange. The library scales to 169M DOF on single GPU.
 
 \subsection{Future Work}
 
