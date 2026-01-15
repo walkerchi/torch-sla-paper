@@ -1,0 +1,554 @@
+\documentclass[11pt,a4paper]{article}
+
+% ============================================================================
+% Packages
+% ============================================================================
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{mathtools}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{listings}
+\usepackage{subcaption}
+\usepackage[margin=1in]{geometry}
+\usepackage{natbib}
+\usepackage{microtype}
+
+% ============================================================================
+% Custom Commands
+% ============================================================================
+\newcommand{\torchsla}{\texttt{torch-sla}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\bA}{\mathbf{A}}
+\newcommand{\bx}{\mathbf{x}}
+\newcommand{\bb}{\mathbf{b}}
+\newcommand{\bu}{\mathbf{u}}
+\newcommand{\bF}{\mathbf{F}}
+\newcommand{\bJ}{\mathbf{J}}
+\newcommand{\blambda}{\boldsymbol{\lambda}}
+\newcommand{\btheta}{\boldsymbol{\theta}}
+
+% Theorem environments
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}{Proposition}
+\newtheorem{lemma}{Lemma}
+\newtheorem{definition}{Definition}
+
+% Code listing style
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    stringstyle=\color{red},
+    commentstyle=\color{gray},
+    numbers=left,
+    numberstyle=\tiny,
+    numbersep=5pt,
+    breaklines=true,
+    frame=single,
+    backgroundcolor=\color{gray!10}
+}
+
+% ============================================================================
+% Title
+% ============================================================================
+\title{%
+    \textbf{torch-sla}: Differentiable Sparse Linear Algebra with \\
+    Sparse Tensor Parallelism and Adjoint Solvers for PyTorch
+}
+
+\author{
+    Zhihao Chi \\
+    \texttt{walkerchi@outlook.com} \\
+    \href{https://github.com/walkerchi/torch-sla}{https://github.com/walkerchi/torch-sla}
+}
+
+\date{\today}
+
+% ============================================================================
+% Document
+% ============================================================================
+\begin{document}
+
+\maketitle
+
+% ============================================================================
+% Abstract
+% ============================================================================
+\begin{abstract}
+We present \torchsla{}, an open-source PyTorch library for differentiable sparse linear algebra that seamlessly integrates with deep learning workflows. The library provides two key innovations: (1) \textbf{Sparse Tensor Parallel} computing via domain decomposition with halo exchange, enabling distributed sparse matrix operations across multiple GPUs following industrial CFD/FEM practices; and (2) \textbf{Adjoint-based differentiation} for both linear and nonlinear sparse solvers, providing memory-efficient gradient computation with $O(1)$ computational graph nodes regardless of solver iterations. \torchsla{} supports multiple backends (SciPy, Eigen, cuSOLVER, cuDSS, PyTorch-native) and scales to over 169 million degrees of freedom on a single GPU. Benchmarks demonstrate near-linear $O(n^{1.1})$ time complexity for iterative solvers and 12$\times$ speedup on multi-GPU configurations compared to single CPU. The library is available at \url{https://github.com/walkerchi/torch-sla} and can be installed via \texttt{pip install torch-sla}.
+\end{abstract}
+
+\textbf{Keywords:} Sparse linear algebra, automatic differentiation, adjoint method, distributed computing, PyTorch, finite element method, computational fluid dynamics
+
+% ============================================================================
+% Introduction
+% ============================================================================
+\section{Introduction}
+
+Sparse linear systems $\bA\bx = \bb$ arise ubiquitously in scientific computing, from finite element analysis to graph neural networks. With the rise of physics-informed machine learning and differentiable programming, there is an increasing demand for sparse solvers that integrate seamlessly with automatic differentiation frameworks like PyTorch~\citep{paszke2019pytorch}.
+
+Existing sparse linear algebra libraries face several challenges when used in differentiable programming contexts:
+\begin{enumerate}
+    \item \textbf{Gradient support}: Most sparse solvers (SciPy, cuSOLVER) are not differentiable, requiring manual gradient implementation.
+    \item \textbf{Memory efficiency}: Naive differentiation through iterative solvers creates $O(k)$ computational graph nodes where $k$ is the number of iterations.
+    \item \textbf{Scalability}: Single-GPU memory limits problem sizes, while distributed sparse matrix operations require complex halo exchange patterns.
+    \item \textbf{Backend fragmentation}: Different backends (CPU direct, GPU direct, GPU iterative) have different APIs and performance characteristics.
+\end{enumerate}
+
+This paper introduces \torchsla{}, a unified library that addresses these challenges through two main contributions:
+
+\paragraph{Contribution 1: Sparse Tensor Parallel Computing}
+We implement a distributed sparse matrix class (\texttt{DSparseMatrix}) that partitions large matrices across multiple GPUs using domain decomposition with automatic halo exchange. This follows the industrial approach used in Ansys Fluent, OpenFOAM, and other production CFD/FEM codes. Our implementation supports:
+\begin{itemize}
+    \item METIS-based graph partitioning for load balancing
+    \item Peer-to-peer halo exchange via NCCL (GPU) or Gloo (CPU)
+    \item Distributed Conjugate Gradient (CG) and LOBPCG eigensolvers
+    \item Memory-efficient design enabling problems with 100M+ DOF
+\end{itemize}
+
+\paragraph{Contribution 2: Adjoint-Based Differentiation}
+We provide adjoint-based gradient computation for both linear and nonlinear solvers:
+\begin{itemize}
+    \item \textbf{Linear solve}: Gradients via transposed system solve, $O(1)$ graph nodes
+    \item \textbf{Eigenvalue solve}: Adjoint eigenvalue gradients using implicit differentiation
+    \item \textbf{Nonlinear solve}: Newton/Anderson solvers with adjoint-based implicit differentiation for $F(\bu, \btheta) = 0$
+\end{itemize}
+
+The remainder of this paper is organized as follows: \Cref{sec:background} provides background on sparse linear algebra and adjoint methods. \Cref{sec:method} describes our implementation of sparse tensor parallelism and adjoint solvers. \Cref{sec:experiments} presents benchmark results. \Cref{sec:related} discusses related work, and \Cref{sec:conclusion} concludes.
+
+% ============================================================================
+% Background
+% ============================================================================
+\section{Background}
+\label{sec:background}
+
+\subsection{Sparse Linear Systems}
+
+A sparse linear system $\bA\bx = \bb$ where $\bA \in \R^{n \times n}$ has $\text{nnz}(\bA) \ll n^2$ non-zero entries. Storage formats include:
+\begin{itemize}
+    \item \textbf{COO (Coordinate)}: Store $(i, j, v)$ triplets for each non-zero
+    \item \textbf{CSR (Compressed Sparse Row)}: Store row pointers, column indices, and values
+    \item \textbf{CSC (Compressed Sparse Column)}: Column-major variant of CSR
+\end{itemize}
+
+Solvers are categorized as:
+\begin{itemize}
+    \item \textbf{Direct solvers}: LU/Cholesky factorization, $O(n^{1.5})$ memory for 2D problems due to fill-in
+    \item \textbf{Iterative solvers}: CG, BiCGStab, GMRES, $O(\text{nnz})$ memory but require $O(k)$ iterations
+\end{itemize}
+
+\subsection{Automatic Differentiation for Linear Solves}
+\label{sec:adjoint_linear}
+
+Given a loss function $\mathcal{L}(\bx)$ where $\bx = \bA^{-1}\bb$, we seek gradients $\partial \mathcal{L}/\partial \bA$ and $\partial \mathcal{L}/\partial \bb$.
+
+Using the identity $\bA\bx = \bb$ and implicit differentiation:
+\begin{align}
+    d\bA \cdot \bx + \bA \cdot d\bx &= d\bb \\
+    \bA \cdot d\bx &= d\bb - d\bA \cdot \bx
+\end{align}
+
+For the gradient with respect to $\bb$:
+\begin{equation}
+    \frac{\partial \mathcal{L}}{\partial \bb} = \bA^{-\top} \frac{\partial \mathcal{L}}{\partial \bx}
+    \label{eq:grad_b}
+\end{equation}
+
+For the gradient with respect to the sparse values $\bA_{ij}$:
+\begin{equation}
+    \frac{\partial \mathcal{L}}{\partial \bA_{ij}} = -\left(\bA^{-\top} \frac{\partial \mathcal{L}}{\partial \bx}\right)_i \cdot \bx_j
+    \label{eq:grad_A}
+\end{equation}
+
+The key insight is that computing both gradients requires only \emph{one additional linear solve} of the transposed system $\bA^\top \blambda = \partial \mathcal{L}/\partial \bx$, regardless of the number of forward solver iterations. This is the \textbf{adjoint method}.
+
+\subsection{Adjoint Method for Nonlinear Systems}
+\label{sec:adjoint_nonlinear}
+
+Consider a nonlinear system $\bF(\bu, \btheta) = \mathbf{0}$ where $\bu$ is the solution and $\btheta$ are parameters. Given a loss $\mathcal{L}(\bu^*)$ evaluated at the solution $\bu^*$, we seek $\partial \mathcal{L}/\partial \btheta$.
+
+The adjoint equation is:
+\begin{equation}
+    \left(\frac{\partial \bF}{\partial \bu}\right)^\top \blambda = \frac{\partial \mathcal{L}}{\partial \bu}
+    \label{eq:adjoint_nonlinear}
+\end{equation}
+
+The parameter gradient is:
+\begin{equation}
+    \frac{\partial \mathcal{L}}{\partial \btheta} = -\blambda^\top \frac{\partial \bF}{\partial \btheta}
+    \label{eq:grad_theta}
+\end{equation}
+
+This requires:
+\begin{enumerate}
+    \item Solving the forward problem $\bF(\bu^*, \btheta) = \mathbf{0}$ (e.g., via Newton-Raphson)
+    \item Solving the adjoint equation \eqref{eq:adjoint_nonlinear} (one linear solve)
+    \item Computing the Jacobian-vector product in \eqref{eq:grad_theta}
+\end{enumerate}
+
+The total memory cost is $O(1)$ graph nodes, independent of Newton iterations.
+
+% ============================================================================
+% Methodology
+% ============================================================================
+\section{Methodology}
+\label{sec:method}
+
+\subsection{Architecture Overview}
+
+\torchsla{} provides a unified API across multiple backends (\Cref{fig:architecture}):
+
+\begin{figure}[htbp]
+    \centering
+    \begin{tabular}{|l|l|l|l|}
+        \hline
+        \textbf{Backend} & \textbf{Device} & \textbf{Methods} & \textbf{Best For} \\
+        \hline
+        \texttt{scipy} & CPU & SuperLU, UMFPACK, CG & Default CPU \\
+        \texttt{eigen} & CPU & CG, BiCGStab & Alternative CPU \\
+        \texttt{cudss} & CUDA & LU, Cholesky, LDLT & Direct CUDA (< 2M DOF) \\
+        \texttt{cusolver} & CUDA & QR, Cholesky, LU & Legacy CUDA \\
+        \texttt{pytorch} & CPU/CUDA & CG, BiCGStab & Large-scale (> 2M DOF) \\
+        \hline
+    \end{tabular}
+    \caption{Available backends in \torchsla{}.}
+    \label{fig:architecture}
+\end{figure}
+
+The \texttt{SparseTensor} class provides a high-level interface:
+
+\begin{lstlisting}
+from torch_sla import SparseTensor
+
+# Create sparse matrix
+A = SparseTensor(val, row, col, shape)
+
+# Solve with automatic backend selection
+x = A.solve(b)  # Gradients flow automatically
+
+# Eigenvalues with adjoint gradients
+eigenvalues, eigenvectors = A.eigsh(k=6)
+
+# Nonlinear solve with implicit differentiation
+u = A.nonlinear_solve(residual_fn, u0, *params)
+\end{lstlisting}
+
+\subsection{Sparse Tensor Parallel Computing}
+\label{sec:distributed}
+
+For large-scale problems that exceed single-GPU memory, we implement domain decomposition with halo exchange following industrial CFD/FEM practices.
+
+\subsubsection{Domain Decomposition}
+
+Given a sparse matrix $\bA$ corresponding to a mesh/graph, we partition nodes into $P$ subdomains using either:
+\begin{itemize}
+    \item \textbf{METIS partitioning}: Minimizes edge cuts for load balancing
+    \item \textbf{Geometric (RCB)}: Recursive Coordinate Bisection based on node coordinates
+    \item \textbf{Simple}: Contiguous row partitioning (fallback)
+\end{itemize}
+
+Each partition $p$ owns a set of nodes $\mathcal{O}_p$ and has halo nodes $\mathcal{H}_p$ from neighboring partitions required for local matrix-vector products.
+
+\subsubsection{Halo Exchange}
+
+For distributed sparse matrix-vector product $\by = \bA\bx$, each partition must exchange halo values (\Cref{alg:halo}):
+
+\begin{algorithm}[htbp]
+\caption{Distributed SpMV with Halo Exchange}
+\label{alg:halo}
+\begin{algorithmic}[1]
+\Require Local vector $\bx_{\text{local}}$, neighbor information
+\State \textbf{Send} owned boundary values to neighbors (async)
+\State \textbf{Receive} halo values from neighbors (async)
+\State \textbf{Synchronize} communication
+\State $\by_{\text{owned}} \gets \bA_{\text{local}} \bx_{\text{local}}$ \Comment{Includes halo columns}
+\State \Return $\by_{\text{owned}}$
+\end{algorithmic}
+\end{algorithm}
+
+We use PyTorch's \texttt{torch.distributed} with NCCL backend for GPU-GPU communication and Gloo for CPU.
+
+\subsubsection{Distributed Iterative Solvers}
+
+For Conjugate Gradient on distributed matrices:
+
+\begin{algorithm}[htbp]
+\caption{Distributed Conjugate Gradient}
+\label{alg:dist_cg}
+\begin{algorithmic}[1]
+\Require Distributed matrix $\bA$, local RHS $\bb_{\text{owned}}$, tolerance $\epsilon$
+\State $\bx \gets \mathbf{0}$, $\br \gets \bb_{\text{owned}}$, $\bp \gets \br$
+\State $\rho \gets \text{all\_reduce}(\br^\top \br, \text{SUM})$ \Comment{Global dot product}
+\While{$\sqrt{\rho} > \epsilon$}
+    \State $\bA\bp \gets \textsc{DistributedSpMV}(\bA, \bp)$ \Comment{Halo exchange}
+    \State $\alpha \gets \rho / \text{all\_reduce}(\bp^\top \bA\bp, \text{SUM})$
+    \State $\bx \gets \bx + \alpha \bp$
+    \State $\br \gets \br - \alpha \bA\bp$
+    \State $\rho_{\text{new}} \gets \text{all\_reduce}(\br^\top \br, \text{SUM})$
+    \State $\bp \gets \br + (\rho_{\text{new}}/\rho) \bp$
+    \State $\rho \gets \rho_{\text{new}}$
+\EndWhile
+\State \Return $\bx$
+\end{algorithmic}
+\end{algorithm}
+
+Each iteration requires:
+\begin{itemize}
+    \item One halo exchange (for SpMV)
+    \item Two \texttt{all\_reduce} operations (for dot products)
+\end{itemize}
+
+\subsection{Adjoint Linear Solver}
+\label{sec:adjoint_linear_impl}
+
+We implement \Cref{eq:grad_b,eq:grad_A} as a custom \texttt{torch.autograd.Function}:
+
+\begin{lstlisting}
+class SparseLinearSolve(Function):
+    @staticmethod
+    def forward(ctx, val, row, col, shape, b):
+        x = solve_sparse(val, row, col, shape, b)
+        ctx.save_for_backward(val, row, col, x)
+        return x
+    
+    @staticmethod
+    def backward(ctx, grad_x):
+        val, row, col, x = ctx.saved_tensors
+        # Solve transposed system
+        lambda_adj = solve_sparse(val, col, row, shape_T, grad_x)
+        # Compute sparse gradients
+        grad_val = -lambda_adj[row] * x[col]
+        grad_b = lambda_adj
+        return grad_val, None, None, None, grad_b
+\end{lstlisting}
+
+Key properties:
+\begin{itemize}
+    \item \textbf{$O(1)$ graph nodes}: Independent of solver iterations
+    \item \textbf{Sparse gradients}: $\partial \mathcal{L}/\partial \text{val}$ has same sparsity as $\bA$
+    \item \textbf{Backend-agnostic}: Works with any forward solver
+\end{itemize}
+
+\subsection{Adjoint Nonlinear Solver}
+\label{sec:adjoint_nonlinear_impl}
+
+For nonlinear systems $\bF(\bu, \btheta) = \mathbf{0}$, we implement Newton-Raphson with adjoint gradients:
+
+\begin{algorithm}[htbp]
+\caption{Adjoint Nonlinear Solve}
+\label{alg:nonlinear}
+\begin{algorithmic}[1]
+\Require Residual $\bF(\bu, \btheta)$, initial guess $\bu_0$, parameters $\btheta$
+\State \textbf{Forward:} Solve $\bF(\bu^*, \btheta) = \mathbf{0}$ via Newton
+\For{$k = 0, 1, \ldots$}
+    \State $\bJ \gets \partial \bF / \partial \bu$ \Comment{Jacobian via autograd}
+    \State $\Delta \bu \gets \bJ^{-1} (-\bF)$ \Comment{Sparse linear solve}
+    \State $\bu \gets \bu + \alpha \Delta \bu$ \Comment{Line search}
+\EndFor
+\State \textbf{Backward:} Given $\partial \mathcal{L}/\partial \bu^*$
+\State Solve $\bJ^\top \blambda = \partial \mathcal{L}/\partial \bu^*$ \Comment{Adjoint equation}
+\State $\partial \mathcal{L}/\partial \btheta \gets -\blambda^\top \partial \bF / \partial \btheta$ \Comment{VJP via autograd}
+\State \Return $\partial \mathcal{L}/\partial \btheta$
+\end{algorithmic}
+\end{algorithm}
+
+We support three nonlinear solver methods:
+\begin{itemize}
+    \item \textbf{Newton-Raphson}: Fast quadratic convergence with Armijo line search
+    \item \textbf{Picard iteration}: Simple fixed-point iteration
+    \item \textbf{Anderson acceleration}: Memory-efficient acceleration of fixed-point methods
+\end{itemize}
+
+\subsubsection{Jacobian-Free Newton-Krylov}
+
+When explicit Jacobian construction is expensive, we use Jacobian-free Newton-Krylov (JFNK):
+
+\begin{equation}
+    \bJ \bv \approx \frac{\bF(\bu + \epsilon \bv) - \bF(\bu)}{\epsilon}
+    \label{eq:jfnk}
+\end{equation}
+
+In PyTorch, this is computed exactly via \texttt{torch.autograd.grad}:
+
+\begin{lstlisting}
+def jacobian_vector_product(u, v, F, params):
+    u.requires_grad_(True)
+    F_u = residual_fn(u, *params)
+    Jv = torch.autograd.grad(F_u, u, grad_outputs=v)[0]
+    return Jv
+\end{lstlisting}
+
+The adjoint system $\bJ^\top \blambda = \br$ is similarly solved using transposed JVPs.
+
+% ============================================================================
+% Experiments
+% ============================================================================
+\section{Experiments}
+\label{sec:experiments}
+
+We benchmark \torchsla{} on 2D Poisson equation discretizations using a 5-point stencil. All experiments use NVIDIA H200 GPUs (140GB HBM3) with CUDA 12.4 and PyTorch 2.2.
+
+\subsection{Single-GPU Scalability}
+
+\Cref{fig:performance} shows solve time vs. problem size for different backends.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/performance.png}
+    \caption{Solver performance comparison. PyTorch CG+Jacobi scales to 169M DOF with near-linear $O(n^{1.1})$ complexity, while direct solvers are limited to $\sim$2M DOF due to memory.}
+    \label{fig:performance}
+\end{figure}
+
+\begin{table}[htbp]
+    \centering
+    \caption{Benchmark results on 2D Poisson (5-point stencil), H200 GPU, float64}
+    \label{tab:benchmark}
+    \begin{tabular}{rrrrrr}
+        \toprule
+        \textbf{DOF} & \textbf{SciPy SuperLU} & \textbf{cuDSS Cholesky} & \textbf{PyTorch CG} & \textbf{Memory} & \textbf{Residual} \\
+        \midrule
+        10K & 24 ms & 128 ms & 20 ms & 36 MB & $10^{-9}$ \\
+        100K & 29 ms & 630 ms & 43 ms & 76 MB & $10^{-7}$ \\
+        1M & 19.4 s & 7.3 s & 190 ms & 474 MB & $10^{-7}$ \\
+        2M & 52.9 s & 15.6 s & 418 ms & 916 MB & $10^{-7}$ \\
+        16M & OOM & OOM & 7.3 s & 7.1 GB & $10^{-6}$ \\
+        81M & OOM & OOM & 75.9 s & 35.9 GB & $10^{-6}$ \\
+        \textbf{169M} & OOM & OOM & \textbf{224 s} & \textbf{74.8 GB} & $10^{-6}$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Key findings:
+\begin{enumerate}
+    \item \textbf{Iterative solvers scale to 169M+ DOF} with $O(n^{1.1})$ time complexity
+    \item \textbf{Direct solvers limited to $\sim$2M DOF} due to $O(n^{1.5})$ fill-in memory
+    \item \textbf{Memory efficiency}: PyTorch CG uses 443 bytes/DOF (vs. 144 bytes/DOF theoretical minimum)
+    \item \textbf{Trade-off}: Direct solvers achieve machine precision ($10^{-14}$), iterative achieves $10^{-6}$
+\end{enumerate}
+
+\subsection{Distributed Computing}
+
+\Cref{fig:distributed} shows distributed solve performance on 4 NVIDIA H200 GPUs.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/distributed_benchmark.png}
+    \caption{Distributed CG solve on 4 GPUs (NCCL) vs. 4 CPU processes (Gloo). GPU is 12$\times$ faster than CPU for 100K DOF.}
+    \label{fig:distributed}
+\end{figure}
+
+\begin{table}[htbp]
+    \centering
+    \caption{Distributed solve performance (4 GPUs, NCCL backend)}
+    \label{tab:distributed}
+    \begin{tabular}{rrrrr}
+        \toprule
+        \textbf{DOF} & \textbf{Time} & \textbf{Residual} & \textbf{Memory/GPU} & \textbf{Speedup vs. CPU} \\
+        \midrule
+        10K & 0.18 s & $7.5 \times 10^{-9}$ & 0.03 GB & 2$\times$ \\
+        100K & 0.61 s & $1.2 \times 10^{-8}$ & 0.05 GB & 12$\times$ \\
+        500K & 1.64 s & $1.2 \times 10^{-7}$ & 0.15 GB & -- \\
+        1M & 2.82 s & $4.0 \times 10^{-7}$ & 0.27 GB & -- \\
+        2M & 6.02 s & $1.3 \times 10^{-6}$ & 0.50 GB & -- \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+With 4 GPUs each having 140GB memory, the theoretical limit is:
+\begin{equation}
+    \text{Max DOF} \approx \frac{4 \times 140 \text{ GB}}{443 \text{ bytes/DOF}} \approx 1.3 \times 10^9 \text{ DOF}
+\end{equation}
+
+\subsection{Gradient Accuracy}
+
+We verify gradient correctness using finite difference comparison (\Cref{tab:gradient}):
+
+\begin{table}[htbp]
+    \centering
+    \caption{Gradient verification: adjoint vs. finite difference}
+    \label{tab:gradient}
+    \begin{tabular}{lrr}
+        \toprule
+        \textbf{Operation} & \textbf{Relative Error} & \textbf{Forward + Backward} \\
+        \midrule
+        Linear solve (sparse A) & $< 10^{-6}$ & 2 solves \\
+        Eigenvalue (k=6) & $< 10^{-5}$ & 1 forward + 1 LOBPCG \\
+        Nonlinear solve (Newton) & $< 10^{-6}$ & Newton + 1 adjoint \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Memory Efficiency}
+
+\Cref{fig:memory} compares memory scaling:
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/memory.png}
+    \caption{Memory usage comparison. Direct solvers show $O(n^{1.5})$ growth due to fill-in, while iterative CG shows $O(n)$ growth.}
+    \label{fig:memory}
+\end{figure}
+
+% ============================================================================
+% Related Work
+% ============================================================================
+\section{Related Work}
+\label{sec:related}
+
+\paragraph{Differentiable Linear Algebra}
+JAX~\citep{jax2018github} provides \texttt{jax.scipy.sparse.linalg.cg} with automatic differentiation. However, naive differentiation through iterations creates $O(k)$ graph nodes. Our adjoint approach achieves $O(1)$ nodes.
+
+\paragraph{Sparse Libraries}
+SciPy~\citep{scipy2020} and Intel MKL provide efficient sparse solvers but lack gradient support. NVIDIA cuSPARSE and cuDSS~\citep{cudss} provide GPU acceleration. We wrap these as differentiable backends.
+
+\paragraph{Implicit Differentiation}
+\citet{blondel2022efficient} formalize implicit differentiation for optimization layers. Our nonlinear solver implements this for general $F(u, \theta) = 0$.
+
+\paragraph{Domain Decomposition}
+PETSc~\citep{petsc2019}, Trilinos~\citep{trilinos}, and OpenFOAM~\citep{openfoam} implement distributed sparse linear algebra. We bring these concepts to PyTorch with automatic differentiation.
+
+% ============================================================================
+% Conclusion
+% ============================================================================
+\section{Conclusion}
+\label{sec:conclusion}
+
+We presented \torchsla{}, a differentiable sparse linear algebra library for PyTorch with two key innovations:
+
+\begin{enumerate}
+    \item \textbf{Sparse Tensor Parallel}: Distributed sparse matrices with halo exchange, enabling multi-GPU computations for problems with 100M+ DOF.
+    
+    \item \textbf{Adjoint Solvers}: Memory-efficient gradient computation for linear and nonlinear sparse solvers with $O(1)$ graph nodes.
+\end{enumerate}
+
+Benchmarks demonstrate:
+\begin{itemize}
+    \item Scaling to 169M DOF on single GPU with PyTorch CG
+    \item 12$\times$ speedup on 4 GPUs vs. 4 CPU processes
+    \item Near-linear $O(n^{1.1})$ time complexity for iterative solvers
+    \item Correct gradients verified against finite differences
+\end{itemize}
+
+\torchsla{} enables differentiable physics simulations at scale, bridging the gap between classical scientific computing and modern deep learning.
+
+\paragraph{Availability}
+The library is open-source under MIT license: \url{https://github.com/walkerchi/torch-sla}
+
+Install via: \texttt{pip install torch-sla}
+
+% ============================================================================
+% References
+% ============================================================================
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}
+
